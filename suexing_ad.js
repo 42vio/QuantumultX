@@ -8,18 +8,19 @@ const postMethod = "POST";
 
 if (!body.Data) {
     console.log("body:" + $response.body);
-    $notification.post(noticeTitle, "苏e行", "Data为空");
-} else if (url.indexOf("/bas/ad/v1/advertisement/getAds") !== -1 && method === postMethod) {
-    console.log('苏e行-开屏页');
-    body='';
-
-} else if (url.indexOf("bff/app/index/recommend" !== -1 )) {
-    console.log('首页商品推荐');
-    body.result.dataList = body.result.dataList.slice(0,2);
-    console.log(body.result.dataList.length);
+} else {
+    if (url.indexOf("/bas/ad/v1/advertisement/getAds") !== -1 && method === postMethod) {
+        console.log('苏e行-开屏页');
+        body='';
     
-}else {
-    $notification.post(noticeTitle, "App路径/请求方法匹配错误:", method + "," + url);
+    } else if (url.indexOf("bff/app/index/recommend") !== -1 && method === postMethod) {
+        console.log('苏e行-首页商品推荐');
+        body.result.dataList = body.result.dataList.slice(0,2);
+        console.log(body);
+        
+    } else {
+        console.log("App路径/请求方法匹配错误:", method + "," + url)
+    }
 }
 
 body = JSON.stringify(body);
