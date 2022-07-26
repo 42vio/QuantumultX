@@ -16,8 +16,6 @@ if (!body.result) {
     } else if (url.indexOf("bff/app/index/recommend") !== -1 && method === postMethod) {
         console.log('苏e行-首页商品推荐');
         body.result.dataList = body.result.dataList.slice(0,2);
-        console.log(body);
-        
     } else {
         console.log("App路径/请求方法匹配错误:", method + "," + url)
     }
