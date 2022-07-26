@@ -6,8 +6,8 @@ const noticeTitle = "苏e行App脚本错误";
 const getMethod = "GET";
 const postMethod = "POST";
 
-if (!body.Data) {
-    console.log("body:" + $response.body);
+if (!body.result) {
+    console.log("苏e行 Data为空");
 } else {
     if (url.indexOf("/bas/ad/v1/advertisement/getAds") !== -1 && method === postMethod) {
         console.log('苏e行-开屏页');
@@ -22,7 +22,6 @@ if (!body.Data) {
         console.log("App路径/请求方法匹配错误:", method + "," + url)
     }
 }
-
 body = JSON.stringify(body);
 
 $done({
