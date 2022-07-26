@@ -15,11 +15,11 @@ if (!body.Data) {
 
 } else if (url.indexOf("bff/app/index/recommend" !== -1 )) {
     console.log('首页商品推荐');
-    let newDataList = fruits.body.result.dataList(0,2);
-    body.result.dataList = newDataList;
+    body.result.dataList = body.result.dataList.slice(0,2);
+    console.log(body.result.dataList.length);
+    
 }else {
-    $no tification.post(noticeTitle, "App路径/请求方法匹配错误:", method + "," + url);
-    console.log('App路径/请求方法匹配错误');
+    $notification.post(noticeTitle, "App路径/请求方法匹配错误:", method + "," + url);
 }
 
 body = JSON.stringify(body);
