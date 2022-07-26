@@ -13,12 +13,13 @@ if (!body.Data) {
     console.log('苏e行-开屏页');
     body='';
 
-} else if (url.indexOf("bff/app/index/recommend") !== -1 && method === postMethod) {
+} else if (url.indexOf("bff/app/index/recommend" !== -1 )) {
     console.log('首页商品推荐');
     let newDataList = fruits.body.result.dataList(0,2);
     body.result.dataList = newDataList;
-    }else {
+}else {
     $no tification.post(noticeTitle, "App路径/请求方法匹配错误:", method + "," + url);
+    console.log('App路径/请求方法匹配错误');
 }
 
 body = JSON.stringify(body);
