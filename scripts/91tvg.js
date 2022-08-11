@@ -60,9 +60,9 @@ function GetCookie() {
   var CookieKey = "91TVGCookie";
 
   if ($request.headers) {
-    var newCookie = $request.headers['Cookie'] || $request.headers['cookie'];
-    if (newCookie) {
-      if (newCookie != cookie) {
+    var CookieValue = $request.headers['Cookie'] || $request.headers['cookie'];
+    if (CookieValue) {
+      if (CookieValue != cookie) {
         var cookie = $.setdata(CookieValue, CookieKey);
         if (cookie) {
           $.msg("更新" + CookieName + "Cookie成功 🎉", "", "");
