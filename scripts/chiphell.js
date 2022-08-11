@@ -63,16 +63,17 @@ function GetCookie() {
     if (CookieValue != cookie) {
       var cookie = $.setdata(CookieValue, CookieKey);
       if (cookie) {
-        $.msg("更新" + "Cookie成功 🎉 ", "", "");
+        $.msgBody = `更新Cookie成功 🎉`;
       } else {
-        $.msg("更新" + "Cookie失败‼️", "", "");
+        $.msgBody = `更新Cookie失败‼️`;
       }
     } else {
       $.log("\nChiphell-与本机储存Cookie相同, 跳过写入 ⚠️")
     }
   } else {
-    $.msg("写入" + "Cookie失败‼️", "", "Cookie关键值缺失");
+    $.msgBody = `获取Cookie失败‼️`;
   }
+  $.msg($.name, ``, $.msgBody);
   $.done()
 }
 
