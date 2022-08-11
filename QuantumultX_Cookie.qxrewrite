@@ -7,7 +7,7 @@
 hostname = www.91tvg.com, ccsp-egmas.sf-express.com, wapside.189.cn, api.m.jd.com,passport.iqiyi.com,*.video.qq.com,music.163.com,*.bilibili.com,113.96.156.178,*.ximalaya.com,zhiyou.smzdm.com,ccsp-egmas.sf-express.com,fmapp.chinafamilymart.com.cn,wx-mini.pagoda.com.cn,h5.ele.me,maicai.api.ddxq.mobi,user-api-prd-mx.wandafilm.com,cms-activity-api-prd-mx.wandafilm.com,*.qunar.com
 
 ;91tvg签到
-^https?:\/\/www\.91tvg\.com\/home\.php\?mod=guide&view=hot&mobile=no url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/91tvg.js
+^https?:\/\/www\.91tvg\.com\/forum\.php\?mod=guide&view=hot&mobile=no url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/91tvg.js
 
 ;顺丰签到 GetCookie by chavyleung
 ^https:\/\/ccsp-egmas.sf-express.com\/cx-app-member\/member\/app\/user\/universalSign url script-request-body https://raw.githubusercontent.com/chavyleung/scripts/master/sfexpress/sfexpress.cookie.js
