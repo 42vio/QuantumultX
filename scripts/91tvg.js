@@ -28,7 +28,7 @@ async function checkin() {
       'Host' : `www.91tvg.com`,
       'Content-Type' : `application/x-www-form-urlencoded`,
       },
-    body: "formhash=004de025&signsubmit=yes&handlekey=signin&emotid=1&referer=https%3A%2F%2Fwww.91tvg.com%2Fforum.php%3Fmod%3Dguide%26view%3Dhot%26mobile%3Dno&content=%E8%AE%B0%E4%B8%8A%E4%B8%80%E7%AC%94%EF%BC%8Chold%E4%BD%8F%E6%88%91%E7%9A%84%E5%BF%AB%E4%B9%90%EF%BC%81&signpn=true"
+    body: body
   }
 
   return new Promise((resolve) => {
