@@ -62,8 +62,7 @@ function GetCookie() {
   if ($request.headers) {
     var header = Object.keys($request.headers).reduce((t, i) => (t[i.toLowerCase()] = $request.headers[i], t), {})['cookie'] || '';
     $.log(header)
-    if (header.indexOf("SESSDATA=") != -1) {
-      var CookieValue = regex.exec(header)[0];
+    var CookieValue = regex.exec(header)[0];
       $.log("-----")
       $.log(CookieValue)
       var cookie = $.setdata(CookieValue, CookieKey);
@@ -72,9 +71,6 @@ function GetCookie() {
       } else {
         $.msg("更新" + CookieName + "Cookie成功 🎉", "", "");
       }
-    } else {
-      $.msg("写入" + CookieName + "Cookie失败‼️", "", "Cookie关键值缺失");
-    }
   } else {
     $.msg("写入" + CookieName + "Cookie失败‼️", "", "配置错误, 无法读取请求头,");
   }
