@@ -61,8 +61,11 @@ function GetCookie() {
   var regex = /SESSDATA=.+?;/;
   if ($request.headers) {
     var header = Object.keys($request.headers).reduce((t, i) => (t[i.toLowerCase()] = $request.headers[i], t), {})['cookie'] || '';
+    $.log(header)
     if (header.indexOf("SESSDATA=") != -1) {
       var CookieValue = regex.exec(header)[0];
+      $.log("-----")
+      $.log(CookieValue)
       var cookie = $.setdata(CookieValue, CookieKey);
       if (!cookie) {
         $.msg("更新" + CookieName + "Cookie失败‼️", "", "");
