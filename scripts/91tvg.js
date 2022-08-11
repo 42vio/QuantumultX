@@ -58,19 +58,23 @@ async function checkin() {
 function GetCookie() {
   var CookieName = "91tvg";
   var CookieKey = "91TVGCookie";
-  var regex = /SESSDATA=.+?;/;
+
   if ($request.headers) {
-    var header = Object.keys($request.headers).reduce((t, i) => (t[i.toLowerCase()] = $request.headers[i], t), {})['cookie'] || '';
-    $.log(header)
-    var CookieValue = regex.exec(header)[0];
-      $.log("-----")
-      $.log(CookieValue)
-      var cookie = $.setdata(CookieValue, CookieKey);
-      if (!cookie) {
-        $.msg("更新" + CookieName + "Cookie失败‼️", "", "");
+    var newCookie = $request.headers['Cookie'] || $request.headers['cookie'];
+    if (newCookie) {
+      if (newCookie != cookie) {
+        var cookie = $.setdata(CookieValue, CookieKey);
+        if (cookie) {
+          $.msg("更新" + CookieName + "Cookie成功 🎉", "", "");
+        } else {
+          $.msg("更新" + CookieName + "Cookie失败‼️", "", "");
+        }
       } else {
-        $.msg("更新" + CookieName + "Cookie成功 🎉", "", "");
+        $.msg("写入" + CookieName + "Cookie失败‼️", "", "Cookie关键值缺失");
       }
+    } else {
+      $.log("\n91tvg-与本机储存Cookie相同, 跳过写入 ⚠️")
+    }
   } else {
     $.msg("写入" + CookieName + "Cookie失败‼️", "", "配置错误, 无法读取请求头,");
   }
