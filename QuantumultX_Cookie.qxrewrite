@@ -8,7 +8,7 @@ hostname = www.91tvg.com, ccsp-egmas.sf-express.com, wapside.189.cn, api.m.jd.co
 
 ;91tvg签到
 ^https?:\/\/(www)?\.91tvg\.com\/forum\.php.? url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/91tvg.js
-^https?:\/\/(www)?\.91tvg\.com\/home\.php.?  url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/91tvg.js
+^https?:\/\/(www)?\.91tvg\.com\/home\.php\?mod=spacecp&ac=credit&showcredit=1 url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/91tvg.js
 
 ;顺丰签到 GetCookie by chavyleung
 ^https:\/\/ccsp-egmas.sf-express.com\/cx-app-member\/member\/app\/user\/universalSign url script-request-body https://raw.githubusercontent.com/chavyleung/scripts/master/sfexpress/sfexpress.cookie.js
