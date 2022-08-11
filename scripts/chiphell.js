@@ -46,7 +46,7 @@ async function checkin() {
           }
           $.msg($.name, ``, $.msgBody);
           $.done();
-        }
+        })
          
       } else {
         $.msgBody = `签到失败 ‼️\n${data}`;
