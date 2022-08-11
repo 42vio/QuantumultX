@@ -9,12 +9,14 @@ hostname = www.91tvg.com
 
 
 const $ = new Env('91tvg')
+const CookieKey = "91TVGCookie";
+const BodyKey = "91TVGBody";
 
-const cookie = $.getdata("91TVGCookie") || ''; 
-const body = $.getdata("91TVGBody") || ''; 
+const cookie = $.getdata(CookieKey) || ''; 
+const body = $.getdata(BodyKey) || ''; 
 
 if (typeof $request !== 'undefined') {
-  GetCookieOrBody()
+  GetCookie()
 } else {
   checkin()
 }
@@ -55,37 +57,35 @@ async function checkin() {
   })
 }
 
-function GetCookieOrBody() {
-  var CookieName = "91tvg";
-  var CookieKey = "91TVGCookie";
-  var BodyKey = "91TVGBody";
+function GetCookie() {
   if ($request.headers) {
     var CookieValue = $request.headers['Cookie'] || $request.headers['cookie'];
     if (CookieValue) {
       if (CookieValue != cookie) {
         var cookie = $.setdata(CookieValue, CookieKey);
         if (cookie) {
-          $.msg("更新" + CookieName + "Cookie成功 🎉", "", "");
+          $.msgBody = `更新Cookie成功 🎉`;
         } else {
-          $.msg("更新" + CookieName + "Cookie失败‼️", "", "");
+          $.msgBody = `更新Cookie失败‼️`;
         }
       } else {
         $.log("\n91tvg-与本机储存Cookie相同, 跳过写入 ⚠️")
       }
     } else {
-      $.msg("写入" + CookieName + "Cookie失败‼️", "", "Cookie关键值缺失");
+      $.msgBody = `获取Cookie失败‼️`;
     }
   } if ($request.body) {
     var BodyValue = $request.body;
     var body = $.setdata(BodyValue, BodyKey);
     if (body) {
-      $.msg("更新" + CookieName + "Body成功 🎉", "", "");
+      $.msgBody = `更新Body成功 🎉`;
     } else {
-      $.msg("更新" + CookieName + "Body失败‼️", "", "");
+      $.msgBody = `更新Body失败‼️`;
     }
   } else {
-    $.msg("写入" + CookieName + "Cookie or Body 失败‼️", "", "配置错误, 无法读取,");
+    $.log("\n获取Body失败‼️ ⚠️")
   }
+  $.msg($.name, ``, $.msgBody);
   $.done()
 }
 
