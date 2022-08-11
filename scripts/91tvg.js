@@ -1,6 +1,5 @@
 /*
 [rewrite_local]
-#获取Bili漫画Cookie
 ^https?:\/\/(www)?91tvg\.com\/forum\.php url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/91tvg.js
 
 [mitm]
@@ -12,9 +11,10 @@ hostname = www.91tvg.com
 const $ = new Env('91tvg')
 
 const cookie = $.getdata("91TVGCookie") || ''; 
+const body = $.getdata("91TVGBody") || ''; 
 
 if (typeof $request !== 'undefined') {
-  GetCookie()
+  GetCookieOrBody()
 } else {
   checkin()
 }
@@ -55,9 +55,10 @@ async function checkin() {
   })
 }
 
-function GetCookie() {
+function GetCookieOrBody() {
   var CookieName = "91tvg";
   var CookieKey = "91TVGCookie";
+  var BodyKey = "91TVGBody";
   if ($request.headers) {
     var CookieValue = $request.headers['Cookie'] || $request.headers['cookie'];
     if (CookieValue) {
@@ -69,13 +70,21 @@ function GetCookie() {
           $.msg("更新" + CookieName + "Cookie失败‼️", "", "");
         }
       } else {
-        $.msg("写入" + CookieName + "Cookie失败‼️", "", "Cookie关键值缺失");
+        $.log("\n91tvg-与本机储存Cookie相同, 跳过写入 ⚠️")
       }
     } else {
-      $.log("\n91tvg-与本机储存Cookie相同, 跳过写入 ⚠️")
+      $.msg("写入" + CookieName + "Cookie失败‼️", "", "Cookie关键值缺失");
+    }
+  } if ($request.body) {
+    var BodyValue = $request.body;
+    var body = $.setdata(BodyValue, BodyKey);
+    if (body) {
+      $.msg("更新" + CookieName + "Body成功 🎉", "", "");
+    } else {
+      $.msg("更新" + CookieName + "Body失败‼️", "", "");
     }
   } else {
-    $.msg("写入" + CookieName + "Cookie失败‼️", "", "配置错误, 无法读取请求头,");
+    $.msg("写入" + CookieName + "Cookie or Body 失败‼️", "", "配置错误, 无法读取,");
   }
   $.done()
 }
