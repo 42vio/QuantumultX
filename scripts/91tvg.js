@@ -61,6 +61,8 @@ function GetCookie() {
   if ($request.headers) {
     var CookieValue = $request.headers['Cookie'] || $request.headers['cookie'];
     if (CookieValue) {
+      $.log(CookieValue)
+      $.log(cookie)
       if (CookieValue != cookie) {
         var cookie = $.setdata(CookieValue, CookieKey);
         if (cookie) {
@@ -74,7 +76,10 @@ function GetCookie() {
     } else {
       $.msgBody = `获取Cookie失败‼️`;
     }
-  } if ($request.body) {
+    $.msg($.name, ``, $.msgBody);
+  }
+
+  if ($request.body) {
     var BodyValue = $request.body;
     var body = $.setdata(BodyValue, BodyKey);
     if (body) {
@@ -82,10 +87,11 @@ function GetCookie() {
     } else {
       $.msgBody = `更新Body失败‼️`;
     }
+    $.msg($.name, ``, $.msgBody);
   } else {
-    $.log("\n获取Body失败‼️ ⚠️")
+    $.log("\nBody为空‼️ ⚠️")
   }
-  $.msg($.name, ``, $.msgBody);
+  
   $.done()
 }
 
