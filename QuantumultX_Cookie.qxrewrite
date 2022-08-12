@@ -10,7 +10,7 @@ hostname = www.chiphell.com, www.91tvg.com, ccsp-egmas.sf-express.com, wapside.1
 ^https?:\/\/www\.chiphell\.com\/forum\.php url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/chiphell.js
 
 ;91tvg签到
-^https?:\/\/www\.91tvg\.com\/forum\.php url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/91tvg.js
+;^https?:\/\/www\.91tvg\.com\/forum\.php url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/91tvg.js
 ^https?:\/\/www\.91tvg\.com\/plugin\.php url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/91tvg.js
 
 ;顺丰签到 GetCookie by chavyleung
