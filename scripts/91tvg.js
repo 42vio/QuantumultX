@@ -1,6 +1,6 @@
 /*
 [rewrite_local]
-^https?:\/\/(www)?91tvg\.com\/forum\.php url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/91tvg.js
+^https?:\/\/www\.91tvg\.com\/forum\.php url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/91tvg.js
 
 [mitm]
 hostname = www.91tvg.com
@@ -59,11 +59,13 @@ async function checkin() {
 
 function GetCookie() {
   if ($request.headers) {
-    var CookieValue = $request.headers['Cookie'] || $request.headers['cookie'];
+    var CookieValue = $request.headers['Cookie'];
     if (CookieValue) {
-      $.log('CookieValue=' + CookieValue)
-      $.log('cookie=' + cookie)
-      if (CookieValue != cookie) {
+      const cookie11 = $.getdata(CookieKey)
+      $.log('cookie11= ' + cookie11)
+      $.log('CookieValue= ' + CookieValue)
+      $.log('BOOL= ' + (CookieValue == cookie11))
+      if (CookieValue != cookie11) {
         var cookie = $.setdata(CookieValue, CookieKey);
         if (cookie) {
           $.msgBody = `更新Cookie成功 🎉`;
@@ -80,6 +82,7 @@ function GetCookie() {
   }
 
   if ($request.body) {
+    $.msgBody = '';
     var BodyValue = $request.body;
     var body = $.setdata(BodyValue, BodyKey);
     if (body) {
