@@ -61,8 +61,8 @@ function GetCookie() {
   if ($request.headers) {
     var CookieValue = $request.headers['Cookie'] || $request.headers['cookie'];
     if (CookieValue) {
-      $.log('CookieValue' + $CookieValue)
-      $.log('cookie' + $cookie)
+      $.log('CookieValue=' + CookieValue)
+      $.log('cookie=' + cookie)
       if (CookieValue != cookie) {
         var cookie = $.setdata(CookieValue, CookieKey);
         if (cookie) {
