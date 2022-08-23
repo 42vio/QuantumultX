@@ -106,8 +106,6 @@ function getPoint(task) {
     .then((resp) => {
       const data = JSON.parse(resp.body)
       task.result = data.success ? '成功' : data.errorMessage
-      console.log(JSON.stringify(task))
-      console.log(resp.body)
     })
 }
 
