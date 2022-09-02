@@ -1,5 +1,5 @@
 
-const $ = new Env('qidian')
+const $ = new Env('起点')
 const CookieKey = "qidianCookie";
 
 const cookie = $.getdata(CookieKey) || ''; 
