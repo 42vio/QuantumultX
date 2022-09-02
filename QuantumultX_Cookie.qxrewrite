@@ -7,7 +7,7 @@
 hostname = magev6.if.qidian.com, www.chiphell.com, www.91tvg.com, ccsp-egmas.sf-express.com, wapside.189.cn, api.m.jd.com,passport.iqiyi.com,*.video.qq.com,music.163.com,*.bilibili.com,113.96.156.178,*.ximalaya.com,zhiyou.smzdm.com,ccsp-egmas.sf-express.com,fmapp.chinafamilymart.com.cn,wx-mini.pagoda.com.cn,h5.ele.me,maicai.api.ddxq.mobi,user-api-prd-mx.wandafilm.com,cms-activity-api-prd-mx.wandafilm.com,*.qunar.com
 
 ;起点签到
-^https:\/\/magev6\.if\.qidian\.com/argus/api/v1/client/getconf script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/qidian.js
+^https:\/\/magev6\.if\.qidian\.com/argus/api/v1/client/getconf url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/qidian.js
 
 ;chiphell签到
 ^https?:\/\/www\.chiphell\.com\/forum\.php url script-request-header https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/chiphell.js
