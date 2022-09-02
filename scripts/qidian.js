@@ -1,7 +1,6 @@
 
 const $ = new Env('qidian')
 const CookieKey = "qidianCookie";
-const BodyKey = "qidianBody";
 
 const cookie = $.getdata(CookieKey) || ''; 
 
