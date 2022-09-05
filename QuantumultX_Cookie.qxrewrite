@@ -55,7 +55,3 @@ hostname = api.zfrontier.com, www.chiphell.com, www.91tvg.com, ccsp-egmas.sf-exp
 
 ;饿了么 GetCookie by blackmatrix7
 ^https?:\/\/h5\.ele\.me\/restapi\/biz\.svip_scene\/svip\/engine\/queryTrafficSupply url script-request-header https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/script/eleme/eleme_daily.js
-
-;万达电影 GetCookie by blackmatrix7
-^https?:\/\/user\-api\-prd\-mx\.wandafilm\.com\/user\/query_user_level\.api url script-request-header https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/script/wanda/wanda_checkin.js
-^https?:\/\/cms\-activity\-api\-prd\-mx\.wandafilm\.com\/activity\/activity_count\.api\?activityCode=(\d*) url script-request-header https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/script/wanda/wanda_checkin.js
