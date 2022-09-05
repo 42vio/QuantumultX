@@ -40,9 +40,8 @@ async function checkin() {
 
 function GetCookie() {
     var CookieValue = $request.headers['x-zfuser-token'];
+    const cookie = $.getdata(CookieKey); 
     if (CookieValue) {
-        $.log("\nCookieValue" + CookieValue)
-        $.log("\ncookie" + cookie)
         if (CookieValue != cookie) {
             var cookie = $.setdata(CookieValue, CookieKey);
             if (cookie) {
