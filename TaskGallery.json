@@ -2,6 +2,7 @@
     "name":"定时签到脚本合集",
     "description":"Crontab Task Gallery",
     "task":[
+        "9 0 * * * https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/zFrontier.js, tag=zFrontier",
         "1 1 * * * https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/91tvg.js, tag=91tvg",
         "10 8 * * * https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/chiphell.js, tag=chiphell",
         "0 0 * * * https://raw.githubusercontent.com/lowking/Scripts/master/sony/sonyClub.js, tag=My SONY Club, img-url=https://raw.githubusercontent.com/HotKids/Rules/master/Quantumult/X/Images/Task/sony.png",
