@@ -14,6 +14,8 @@ const BodyKey = "91TVGBody";
 
 const cookie = $.getdata(CookieKey) || ''; 
 const body = $.getdata(BodyKey) || ''; 
+$.log("\n！！！cookie:" + cookie)
+$.log("\n！！！body:" + body)
 
 if (typeof $request !== 'undefined') {
   GetCookie()
