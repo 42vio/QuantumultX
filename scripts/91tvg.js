@@ -25,11 +25,17 @@ async function checkin() {
   const myRequest = {
     url: `https://www.91tvg.com/plugin.php?id=dc_signin:sign&inajax=1`,
     headers: {
-      'Cookie' : cookie,
+      'Accept' : `text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`,
+      'Origin' : `https://www.91tvg.com`,
       'Accept-Encoding' : `gzip, deflate, br`,
-      'Host' : `www.91tvg.com`,
+      'Cookie' : cookie,
       'Content-Type' : `application/x-www-form-urlencoded`,
-      },
+      'Host' : `www.91tvg.com`,
+      'Connection' : `keep-alive`,
+      'User-Agent' : `Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1`,
+      'Referer' : `https://www.91tvg.com/`,
+      'Accept-Language' : `zh-CN,zh-Hans;q=0.9`
+    },
     body: body
   }
 
