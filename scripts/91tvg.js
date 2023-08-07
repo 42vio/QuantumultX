@@ -13,7 +13,7 @@ const CookieKey = "91TVGCookie";
 const BodyKey = "91TVGBody";
 
 const cookie = $.getdata(CookieKey) || ''; 
-const body = $.getdata(BodyKey) || ''; 
+const body = $.getdata(BodyKey) || 'formhash=43e0c65a&signsubmit=yes&handlekey=signin&emotid=1&referer=https%3A%2F%2Fwww.tekqart.com%2F&content=%E8%AE%B0%E4%B8%8A%E4%B8%80%E7%AC%94%EF%BC%8Chold%E4%BD%8F%E6%88%91%E7%9A%84%E5%BF%AB%E4%B9%90%EF%BC%81'; 
 
 if (typeof $request !== 'undefined') {
   GetCookie()
