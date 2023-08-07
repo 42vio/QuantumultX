@@ -25,16 +25,14 @@ async function checkin() {
   const myRequest = {
     url: `https://www.tekqart.com/plugin.php?id=dc_signin:sign&inajax=1`,
     headers: {
-      'Accept' : `text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`,
+      'Accept' : `text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7`,
       'Origin' : `https://www.tekqart.com`,
       'Accept-Encoding' : `gzip, deflate, br`,
       'Cookie' : cookie,
-      'Content-Type' : `application/x-www-form-urlencoded`,
       'Host' : `www.tekqart.com`,
       'Connection' : `keep-alive`,
-      'User-Agent' : `Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1`,
-      'Referer' : `https://www.tekqart.com/`,
-      'Accept-Language' : `zh-CN,zh-Hans;q=0.9`
+      'User-Agent' : `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36`,
+      'Referer' : `https://www.tekqart.com/`
     },
     body: body
   }
