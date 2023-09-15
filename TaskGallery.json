@@ -5,7 +5,7 @@
         "9 0 * * * https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/zFrontier.js, tag=zFrontier",
         "1 1 * * * https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/91tvg.js, tag=91tvg",
         "10 8 * * * https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/chiphell.js, tag=chiphell",
-        "12 8 * * * https://raw.githubusercontent.com/Crazy-Z7/Task/main/GDTu.js, tag=高德地图签到, img-url=https://raw.githubusercontent.com/Crazy-Z7/Task/main/Image/IMG_0967.jpeg, enabled=true",
+        "0 */8 * * * https://raw.githubusercontent.com/Peng-YM/QuanX/master/Tasks/flow.js, tag=机场剩余流量查询, img-url=https://raw.githubusercontent.com/Orz-3/mini/master/Color/airport.png, enabled=true",
         "0 0 * * * https://raw.githubusercontent.com/lowking/Scripts/master/sony/sonyClub.js, tag=My SONY Club, img-url=https://raw.githubusercontent.com/HotKids/Rules/master/Quantumult/X/Images/Task/sony.png",
         "5 0,6 * * * https://raw.githubusercontent.com/NobyDa/Script/master/JD-DailyBonus/JD_DailyBonus.js, tag=京东, img-url=https://raw.githubusercontent.com/HotKids/Rules/master/Quantumult/X/Images/Task/jd.png",
         "10 0 * * * https://raw.githubusercontent.com/NobyDa/Script/master/iQIYI-DailyBonus/iQIYI.js, tag=爱奇艺, img-url=https://raw.githubusercontent.com/HotKids/Rules/master/Quantumult/X/Images/Task/iqiyi.png",
