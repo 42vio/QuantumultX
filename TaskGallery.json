@@ -25,5 +25,6 @@
         "0 9 * * * https://raw.githubusercontent.com/Peng-YM/QuanX/master/Tasks/psn.js, tag=PSN会免, img-url=https://raw.githubusercontent.com/Orz-3/mini/master/Color/PSN.png, enabled=true",
         "0 9 * * * https://raw.githubusercontent.com/Peng-YM/QuanX/master/Tasks/steam.js, tag=Steam价格, img-url=https://raw.githubusercontent.com/Orz-3/mini/master/Color/steam.png, enabled=true",
         "0 9 * * * https://raw.githubusercontent.com/Peng-YM/QuanX/master/Tasks/steam.js, tag=Steam价格, img-url=https://raw.githubusercontent.com/Orz-3/mini/master/Color/steam.png, enabled=true",
+        "15 9 * * * https://raw.githubusercontent.com/FoKit/Scripts/main/scripts/jparking_sign.js, tag=捷停车签到, img-url=https://raw.githubusercontent.com/FoKit/Scripts/main/images/jparking.png, enabled=true",
     ]
 }
