@@ -4,7 +4,7 @@
 # https://github.com/HotKids/Rules/tree/master/Quantumult/X
 # https://github.com/blackmatrix7/ios_rule_script/blob/master/script/gallery.json
 
-hostname = sytgate.jslife.com.cn, api.zfrontier.com, www.chiphell.com, www.tekqart.com, ccsp-egmas.sf-express.com, wapside.189.cn, ms.jr.jd.com, me-api.jd.com, api.m.jd.com,passport.iqiyi.com,*.video.qq.com,music.163.com,*.bilibili.com,113.96.156.178,*.ximalaya.com,zhiyou.smzdm.com,ccsp-egmas.sf-express.com,fmapp.chinafamilymart.com.cn,wx-mini.pagoda.com.c,maicai.api.ddxq.mobi,user-api-prd-mx.wandafilm.com,cms-activity-api-prd-mx.wandafilm.com,*.qunar.com
+hostname = hrmapp.hitrontech.com, sytgate.jslife.com.cn, api.zfrontier.com, www.chiphell.com, www.tekqart.com, ccsp-egmas.sf-express.com, wapside.189.cn, ms.jr.jd.com, me-api.jd.com, api.m.jd.com,passport.iqiyi.com,*.video.qq.com,music.163.com,*.bilibili.com,113.96.156.178,*.ximalaya.com,zhiyou.smzdm.com,ccsp-egmas.sf-express.com,fmapp.chinafamilymart.com.cn,wx-mini.pagoda.com.c,maicai.api.ddxq.mobi,user-api-prd-mx.wandafilm.com,cms-activity-api-prd-mx.wandafilm.com,*.qunar.com
 
 ;捷停车
 ^https:\/\/sytgate\.jslife\.com\.cn\/core-gateway\/order\/carno\/pay\/info url script-request-body https://raw.githubusercontent.com/FoKit/Scripts/main/scripts/jparking_sign.js
@@ -54,3 +54,6 @@ hostname = sytgate.jslife.com.cn, api.zfrontier.com, www.chiphell.com, www.tekqa
 
 ;全家 GetCookie by blackmatrix7
 ^https?:\/\/fmapp\.chinafamilymart\.com\.cn\/api\/app\/market\/member\/(signin\/usersign|sign\/current) url script-request-header https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/script/famijia/famijia_checkin.js
+
+;考勤 App 登录与考勤查询：抓取会话供 17:20 定时提醒使用
+^https:\/\/hrmapp\.hitrontech\.com:9999\/scsrwd\/SCSService\.asmx url script-request-body https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/attendance-qx.js
