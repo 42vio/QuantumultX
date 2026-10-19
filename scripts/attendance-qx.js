@@ -1,8 +1,9 @@
 /* Quantumult X request rewrite + scheduled task in one file. */
 const URL = "https://hrmapp.hitrontech.com:9999/scsrwd/SCSService.asmx";
 const USER_KEY = "hrm_attendance_user_id";
-const SESSION_KEY = "hrm_attendance_session_guid";
+const CAPTURE_NOTICE_DAY_KEY = "hrm_attendance_capture_notice_day";
 const GUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+const EMPTY_SESSION = "00000000-0000-0000-0000-000000000000";
 
 function escapeXml(value) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -26,11 +27,13 @@ function captureRequest() {
     const body = unescapeXml(String($request.body || ""));
     if (body.includes("<SystemObjectRun") && body.includes("<Action>Login</Action>")) {
       const user = body.match(/<UserID>([0-9a-f-]{36})<\/UserID>/i);
-      if (user && GUID.test(user[1])) $prefs.setValueForKey(user[1], USER_KEY);
-    }
-    if (body.includes("<BusinessObjectRun") && body.includes("<FuncID>GetAttendData</FuncID>")) {
-      const session = body.match(/<SessionGuid>([0-9a-f-]{36})<\/SessionGuid>/i);
-      if (session && GUID.test(session[1])) $prefs.setValueForKey(session[1], SESSION_KEY);
+      if (user && GUID.test(user[1]) && $prefs.setValueForKey(user[1], USER_KEY)) {
+        const today = todayChina();
+        if ($prefs.valueForKey(CAPTURE_NOTICE_DAY_KEY) !== today) {
+          $prefs.setValueForKey(today, CAPTURE_NOTICE_DAY_KEY);
+          $notify("考勤重写成功", "已获取登录标识", "可手动运行下班打卡提醒任务验证");
+        }
+      }
     }
   } catch (_) {
     // Never log request bodies or authentication values.
@@ -47,13 +50,16 @@ function soap(operation, session, inner, progId) {
     '</args></' + operation + '></soap12:Body></soap12:Envelope>';
 }
 function loginInput(user) {
-  return "<TLoginInputArgs><AppName>App</AppName><CompanyID /><UserID>" + escapeXml(user) +
+  return '<?xml version="1.0" encoding="utf-16"?>' +
+    '<TLoginInputArgs xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
+    'xmlns:xsd="http://www.w3.org/2001/XMLSchema"><AppName>App</AppName><CompanyID /><UserID>' + escapeXml(user) +
     "</UserID><Password /><LanguageID>zh-TW</LanguageID><UserHostAddress />" +
     "<IsSaveSessionBuffer>true</IsSaveSessionBuffer><ValidateCode /><OAuthType>NotSet</OAuthType>" +
     "<IsValidateRegister>false</IsValidateRegister></TLoginInputArgs>";
 }
 function attendanceInput() {
-  return '<TExecFuncInputArgs xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
+  return '<?xml version="1.0" encoding="utf-16"?>' +
+    '<TExecFuncInputArgs xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
     'xmlns:xsd="http://www.w3.org/2001/XMLSchema"><FuncID>GetAttendData</FuncID>' +
     '<Parameters><Parameter><Name>caller</Name><Value xsi:type="xsd:string">SCSAppForms</Value>' +
     '</Parameter></Parameters></TExecFuncInputArgs>';
@@ -61,7 +67,8 @@ function attendanceInput() {
 async function post(body) {
   const response = await $task.fetch({
     url: URL, method: "POST", body,
-    headers: {"Content-Type": "application/soap+xml; charset=utf-8", "Accept": "application/soap+xml"}
+    headers: {"Content-Type": "application/soap+xml; charset=utf-8", "Accept": "application/soap+xml"},
+    opts: {policy: "direct"}
   });
   if (response.statusCode !== 200 || !response.body) throw new Error("考勤服务连接失败");
   const xml = unescapeXml(response.body);
@@ -90,14 +97,12 @@ function clockOut(xml) {
 }
 async function main() {
   const user = $prefs.valueForKey(USER_KEY);
-  const previous = $prefs.valueForKey(SESSION_KEY);
-  if (!GUID.test(user || "") || !GUID.test(previous || ""))
-    throw new Error("请先用 QX 开启重写并在考勤 App 查看一次考勤");
-  const login = await post(soap("SystemObjectRun", previous, loginInput(user)));
-  if (field(login, "Result").toLowerCase() !== "true") throw new Error("考勤会话已失效");
+  if (!GUID.test(user || ""))
+    throw new Error("请先用 QX 开启重写并打开一次考勤 App");
+  const login = await post(soap("SystemObjectRun", EMPTY_SESSION, loginInput(user)));
+  if (field(login, "Result").toLowerCase() !== "true") throw new Error("考勤自动登录失败");
   const session = field(login, "SessionGuid");
-  if (!GUID.test(session)) throw new Error("续登未返回有效会话");
-  if (!$prefs.setValueForKey(session, SESSION_KEY)) throw new Error("无法保存更新后的会话");
+  if (!GUID.test(session) || session === EMPTY_SESSION) throw new Error("登录未返回有效会话");
   const result = await post(soap("BusinessObjectRun", session, attendanceInput(), "EIP0080600"));
   const times = clockOut(result);
   $notify("下班打卡提醒", "今天 " + times.clockIn + " 上班",
@@ -108,9 +113,9 @@ if (typeof $request !== "undefined") {
   $done({});
 } else {
   main().catch(error => {
-    const allowed = ["请先用 QX 开启重写并在考勤 App 查看一次考勤", "考勤服务连接失败",
-      "考勤服务返回错误", "考勤会话已失效", "续登未返回有效会话",
-      "无法保存更新后的会话", "考勤响应缺少数据", "考勤数据格式错误",
+    const allowed = ["请先用 QX 开启重写并打开一次考勤 App", "考勤服务连接失败",
+      "考勤服务返回错误", "考勤自动登录失败", "登录未返回有效会话",
+      "考勤响应缺少数据", "考勤数据格式错误",
       "未找到今日唯一考勤记录", "今日上班时间为空"];
     const message = allowed.includes(error.message) ? error.message : "请手动查看考勤";
     $notify("下班打卡提醒", "查询失败", message);
