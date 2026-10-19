@@ -86,6 +86,18 @@ async function post(body, userAgent, language) {
 function todayChina() {
   return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, "/");
 }
+function loginFailure(xml) {
+  const result = field(xml, "Result").toLowerCase();
+  if (!result) return "登录响应缺少结果字段";
+  const message = field(xml, "Message");
+  if (!message) return "服务端拒绝登录（未提供原因）";
+  if (/设备|裝置|装置|手機|手机|綁定|绑定|device|phoneidentifier/i.test(message))
+    return "服务端提示设备校验失败";
+  if (/密碼|密码|password|account|帳號|账号|使用者|用户/i.test(message))
+    return "服务端提示登录身份无效";
+  if (/session|會話|会话/i.test(message)) return "服务端提示会话无效";
+  return "服务端拒绝登录（原因未分类）";
+}
 function clockOut(xml) {
   const marker = xml.indexOf("<Name>AttendData</Name>");
   if (marker < 0) throw new Error("考勤响应缺少数据");
@@ -113,7 +125,7 @@ async function main() {
       !String(userAgent || "").includes("SCSAPPForms.iOS"))
     throw new Error("请先用 QX 开启重写并打开一次考勤 App");
   const login = await post(loginBody, userAgent, language);
-  if (field(login, "Result").toLowerCase() !== "true") throw new Error("考勤自动登录失败");
+  if (field(login, "Result").toLowerCase() !== "true") throw new Error(loginFailure(login));
   const session = field(login, "SessionGuid");
   if (!GUID.test(session) || session === EMPTY_SESSION) throw new Error("登录未返回有效会话");
   const result = await post(soap("BusinessObjectRun", session, attendanceInput(), "EIP0080600"),
@@ -128,7 +140,10 @@ if (typeof $request !== "undefined") {
 } else {
   main().catch(error => {
     const allowed = ["请先用 QX 开启重写并打开一次考勤 App", "考勤服务连接失败",
-      "考勤服务返回错误", "考勤自动登录失败", "登录未返回有效会话",
+      "考勤服务返回错误", "登录响应缺少结果字段", "服务端提示设备校验失败",
+      "服务端提示登录身份无效", "服务端提示会话无效",
+      "服务端拒绝登录（未提供原因）", "服务端拒绝登录（原因未分类）",
+      "登录未返回有效会话",
       "考勤响应缺少数据", "考勤数据格式错误",
       "未找到今日唯一考勤记录", "今日上班时间为空"];
     const message = allowed.includes(error.message) ? error.message : "请手动查看考勤";
