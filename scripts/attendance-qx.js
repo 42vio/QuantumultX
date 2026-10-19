@@ -1,7 +1,9 @@
 /* Quantumult X request rewrite + scheduled task in one file. */
 const URL = "https://hrmapp.hitrontech.com:9999/scsrwd/SCSService.asmx";
-const USER_KEY = "hrm_attendance_user_id";
-const CAPTURE_NOTICE_DAY_KEY = "hrm_attendance_capture_notice_day";
+const LOGIN_BODY_KEY = "hrm_attendance_login_request";
+const LOGIN_UA_KEY = "hrm_attendance_login_user_agent";
+const LOGIN_LANG_KEY = "hrm_attendance_login_language";
+const CAPTURE_NOTICE_DAY_KEY = "hrm_attendance_capture_notice_day_v2";
 const GUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const EMPTY_SESSION = "00000000-0000-0000-0000-000000000000";
 
@@ -22,16 +24,29 @@ function field(xml, name) {
   const match = xml.match(new RegExp("<" + name + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + name + ">", "i"));
   return match ? match[1].trim() : "";
 }
+function requestHeader(name) {
+  const headers = $request.headers || {};
+  const key = Object.keys(headers).find(key => key.toLowerCase() === name.toLowerCase());
+  return key ? String(headers[key]) : "";
+}
 function captureRequest() {
   try {
-    const body = unescapeXml(String($request.body || ""));
+    const original = String($request.body || "");
+    const body = unescapeXml(original);
     if (body.includes("<SystemObjectRun") && body.includes("<Action>Login</Action>")) {
       const user = body.match(/<UserID>([0-9a-f-]{36})<\/UserID>/i);
-      if (user && GUID.test(user[1]) && $prefs.setValueForKey(user[1], USER_KEY)) {
+      const session = field(body, "SessionGuid");
+      const userAgent = requestHeader("User-Agent");
+      const language = requestHeader("Accept-Language") || "zh-CN";
+      if (user && GUID.test(user[1]) && session === EMPTY_SESSION &&
+          userAgent.includes("SCSAPPForms.iOS") &&
+          $prefs.setValueForKey(original, LOGIN_BODY_KEY) &&
+          $prefs.setValueForKey(userAgent, LOGIN_UA_KEY) &&
+          $prefs.setValueForKey(language, LOGIN_LANG_KEY)) {
         const today = todayChina();
         if ($prefs.valueForKey(CAPTURE_NOTICE_DAY_KEY) !== today) {
           $prefs.setValueForKey(today, CAPTURE_NOTICE_DAY_KEY);
-          $notify("考勤重写成功", "已获取登录标识", "可手动运行下班打卡提醒任务验证");
+          $notify("考勤重写成功", "已保存 App 登录请求", "可手动运行下班打卡提醒任务验证");
         }
       }
     }
@@ -49,14 +64,6 @@ function soap(operation, session, inner, progId) {
     '<soap12:Body><' + operation + ' xmlns="http://scsservices.net/"><args>' + fields +
     '</args></' + operation + '></soap12:Body></soap12:Envelope>';
 }
-function loginInput(user) {
-  return '<?xml version="1.0" encoding="utf-16"?>' +
-    '<TLoginInputArgs xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
-    'xmlns:xsd="http://www.w3.org/2001/XMLSchema"><AppName>App</AppName><CompanyID /><UserID>' + escapeXml(user) +
-    "</UserID><Password /><LanguageID>zh-TW</LanguageID><UserHostAddress />" +
-    "<IsSaveSessionBuffer>true</IsSaveSessionBuffer><ValidateCode /><OAuthType>NotSet</OAuthType>" +
-    "<IsValidateRegister>false</IsValidateRegister></TLoginInputArgs>";
-}
 function attendanceInput() {
   return '<?xml version="1.0" encoding="utf-16"?>' +
     '<TExecFuncInputArgs xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
@@ -64,10 +71,11 @@ function attendanceInput() {
     '<Parameters><Parameter><Name>caller</Name><Value xsi:type="xsd:string">SCSAppForms</Value>' +
     '</Parameter></Parameters></TExecFuncInputArgs>';
 }
-async function post(body) {
+async function post(body, userAgent, language) {
   const response = await $task.fetch({
     url: URL, method: "POST", body,
-    headers: {"Content-Type": "application/soap+xml; charset=utf-8", "Accept": "application/soap+xml"},
+    headers: {"Content-Type": "application/soap+xml; charset=utf-8", "Accept": "*/*",
+      "User-Agent": userAgent, "Accept-Language": language},
     opts: {policy: "direct"}
   });
   if (response.statusCode !== 200 || !response.body) throw new Error("考勤服务连接失败");
@@ -96,14 +104,20 @@ function clockOut(xml) {
           nextDay: minutes >= 1440};
 }
 async function main() {
-  const user = $prefs.valueForKey(USER_KEY);
-  if (!GUID.test(user || ""))
+  const loginBody = $prefs.valueForKey(LOGIN_BODY_KEY);
+  const userAgent = $prefs.valueForKey(LOGIN_UA_KEY);
+  const language = $prefs.valueForKey(LOGIN_LANG_KEY) || "zh-CN";
+  const decoded = unescapeXml(String(loginBody || ""));
+  const user = decoded.match(/<UserID>([0-9a-f-]{36})<\/UserID>/i);
+  if (!user || !GUID.test(user[1]) || field(decoded, "SessionGuid") !== EMPTY_SESSION ||
+      !String(userAgent || "").includes("SCSAPPForms.iOS"))
     throw new Error("请先用 QX 开启重写并打开一次考勤 App");
-  const login = await post(soap("SystemObjectRun", EMPTY_SESSION, loginInput(user)));
+  const login = await post(loginBody, userAgent, language);
   if (field(login, "Result").toLowerCase() !== "true") throw new Error("考勤自动登录失败");
   const session = field(login, "SessionGuid");
   if (!GUID.test(session) || session === EMPTY_SESSION) throw new Error("登录未返回有效会话");
-  const result = await post(soap("BusinessObjectRun", session, attendanceInput(), "EIP0080600"));
+  const result = await post(soap("BusinessObjectRun", session, attendanceInput(), "EIP0080600"),
+    userAgent, language);
   const times = clockOut(result);
   $notify("下班打卡提醒", "今天 " + times.clockIn + " 上班",
     times.clockOut + (times.nextDay ? "（次日）" : "") + " 可打卡下班");
