@@ -75,7 +75,7 @@ function clockOut(xml) {
   const time = String((matches[0].AttendTime || {}).WorkTime || "");
   if (!/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(time)) throw new Error("今日上班时间为空");
   const parts = time.split(":").map(Number);
-  const minutes = parts[0] * 60 + parts[1] + 9 * 60;
+  const minutes = Math.max(parts[0] * 60 + parts[1] + 9 * 60, 17 * 60 + 30);
   const hh = String(Math.floor((minutes % 1440) / 60)).padStart(2, "0");
   const mm = String(minutes % 60).padStart(2, "0");
   return {clockIn: time.slice(0, 5), clockOut: hh + ":" + mm,
