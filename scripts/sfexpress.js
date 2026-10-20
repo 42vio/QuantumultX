@@ -1,5 +1,6 @@
 const base = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonPost/'
-const sessionKey = 'sfexpress_web_session'
+const sessionsKey = 'sfexpress_web_sessions'
+const legacyKey = 'sfexpress_web_session'
 const signService = '~memberNonactivity~integralSignV2Service~'
 const taskService = '~memberNonactivity~integralTaskStrategyService~'
 const taskRoute = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonRoutePost/memberEs/taskRecord/finishTask'
@@ -24,10 +25,40 @@ function request(path, body, headers, absolute = false, requireObj = true) {
   })
 }
 
-async function main() {
-  const session = $prefs.valueForKey(sessionKey)
-  if (!session) throw new Error('缺少会话，请先在顺丰 App 打开签到页')
-  const headers = JSON.parse(session)
+function accountId(headers) {
+  const cookie = headers.cookie || headers.Cookie || ''
+  const item = cookie.split(';').map(part => part.trim()).find(part => part.startsWith('_login_user_id_='))
+  return item ? item.slice('_login_user_id_='.length) : ''
+}
+
+function accountLabel(headers, id) {
+  const cookie = headers.cookie || headers.Cookie || ''
+  const item = cookie.split(';').map(part => part.trim()).find(part => part.startsWith('_login_mobile_='))
+  let mobile = item ? item.slice('_login_mobile_='.length) : ''
+  try { mobile = decodeURIComponent(mobile) } catch (_) {}
+  const digits = mobile.replace(/\D/g, '')
+  return `账号尾号 ${digits.slice(-4) || id.slice(-4)}`
+}
+
+function loadAccounts() {
+  const raw = $prefs.valueForKey(sessionsKey)
+  const state = raw ? JSON.parse(raw) : { accounts: {} }
+  if (!state.accounts || typeof state.accounts !== 'object' || Array.isArray(state.accounts)) {
+    throw new Error('已保存的账号列表格式错误')
+  }
+  const accounts = { ...state.accounts }
+  const legacy = $prefs.valueForKey(legacyKey)
+  if (legacy) {
+    const headers = JSON.parse(legacy)
+    const id = accountId(headers)
+    if (id && !accounts[id]) accounts[id] = { headers, label: accountLabel(headers, id) }
+  }
+  return Object.values(accounts)
+}
+
+async function runAccount(account) {
+  const headers = { ...account.headers }
+  const label = account.label || '账号'
   let today
   try {
     today = await request(signService + 'getTodaySign', {}, headers)
@@ -74,17 +105,31 @@ async function main() {
         claimed++
       } catch (error) {
         failed++
-        console.log(`每日任务 ${task.title || task.taskCode}：${error.message}`)
+        console.log(`${label} 每日任务 ${task.title || task.taskCode}：${error.message}`)
       }
     }
     tasks = `每日任务领取 ${claimed} 项，未完成 ${failed} 项`
   } catch (error) {
     tasks = `每日任务查询失败：${error.message}`
   }
-  $notify('顺丰速运', summary, tasks)
+  $notify(`顺丰速运 · ${label}`, summary, tasks)
+}
+
+async function main() {
+  const accounts = loadAccounts()
+  if (!accounts.length) throw new Error('缺少会话，请先在顺丰 App 打开签到页')
+  for (const account of accounts) {
+    try {
+      await runAccount(account)
+    } catch (error) {
+      const label = account.label || '账号'
+      console.log(`顺丰速运 ${label}：${error.message}`)
+      $notify(`顺丰速运 · ${label}`, '签到失败', `${error.message}；请切换到该账号并重新打开签到页`)
+    }
+  }
 }
 
 main().catch(error => {
   console.log(`顺丰速运：${error.message}`)
-  $notify('顺丰速运', '签到失败', `${error.message}；请重新打开签到页更新会话`)
+  $notify('顺丰速运', '签到失败', error.message)
 }).finally(() => $done())
