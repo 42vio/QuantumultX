@@ -1,5 +1,9 @@
 # QuantumultX
 
+## 顺丰速运签到
+
+`scripts/sfexpress.cookie.js` 在顺丰 App 积分签到页保存当前 Web 会话到 Quantumult X 本地偏好设置；`scripts/sfexpress.js` 用新版签到接口查询并签到，随后尝试领取每日任务积分。更新重写和任务订阅后，先打开一次签到页，收到“会话已更新”通知，再手动运行任务验证。会话失效时重新打开签到页即可刷新；仓库不保存抓包中的 Cookie 或个人信息。
+
 
 ## 下班打卡提醒（Quantumult X）
 
