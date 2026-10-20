@@ -6,7 +6,8 @@ const LOGIN_LANG_KEY = "hrm_attendance_login_language";
 const QUERY_BODY_KEY = "hrm_attendance_query_request";
 const QUERY_UA_KEY = "hrm_attendance_query_user_agent";
 const QUERY_LANG_KEY = "hrm_attendance_query_language";
-const CAPTURE_NOTICE_DAY_KEY = "hrm_attendance_capture_notice_day_v5";
+const LOGIN_NOTICE_DAY_KEY = "hrm_attendance_login_notice_day_v1";
+const QUERY_NOTICE_DAY_KEY = "hrm_attendance_query_notice_day_v1";
 const GUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const EMPTY_SESSION = "00000000-0000-0000-0000-000000000000";
 
@@ -43,6 +44,11 @@ function captureRequest() {
         $prefs.setValueForKey(original, LOGIN_BODY_KEY);
         $prefs.setValueForKey(userAgent, LOGIN_UA_KEY);
         $prefs.setValueForKey(language, LOGIN_LANG_KEY);
+        const today = todayChina();
+        if ($prefs.valueForKey(LOGIN_NOTICE_DAY_KEY) !== today) {
+          $prefs.setValueForKey(today, LOGIN_NOTICE_DAY_KEY);
+          $notify("考勤登录请求已抓取", "已保存 App 登录请求", "任务查询时将使用这份请求尝试登录");
+        }
       }
     }
     if (body.includes("<BusinessObjectRun") && body.includes("<FuncID>GetAttendData</FuncID>")) {
@@ -55,9 +61,9 @@ function captureRequest() {
           $prefs.setValueForKey(language, QUERY_LANG_KEY) &&
           $prefs.valueForKey(LOGIN_BODY_KEY)) {
         const today = todayChina();
-        if ($prefs.valueForKey(CAPTURE_NOTICE_DAY_KEY) !== today) {
-          $prefs.setValueForKey(today, CAPTURE_NOTICE_DAY_KEY);
-          $notify("考勤重写成功", "已保存 App 登录请求与考勤模板", "可手动运行下班打卡提醒任务验证");
+        if ($prefs.valueForKey(QUERY_NOTICE_DAY_KEY) !== today) {
+          $prefs.setValueForKey(today, QUERY_NOTICE_DAY_KEY);
+          $notify("考勤查询请求已抓取", "已保存当日考勤查询模板", "可手动运行下班打卡提醒任务验证");
         }
       }
     }
