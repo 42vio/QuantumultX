@@ -71,8 +71,7 @@ async function post(body, userAgent, language) {
   const response = await $task.fetch({
     url: URL, method: "POST", body,
     headers: {"Content-Type": "application/soap+xml; charset=utf-8", "Accept": "*/*",
-      "User-Agent": userAgent, "Accept-Language": language},
-    opts: {policy: "direct"}
+      "User-Agent": userAgent, "Accept-Language": language}
   });
   if (response.statusCode !== 200 || !response.body) throw new Error("考勤服务连接失败");
   const xml = unescapeXml(response.body);
