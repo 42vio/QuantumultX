@@ -112,21 +112,26 @@ async function runAccount(account) {
   } catch (error) {
     tasks = `每日任务查询失败：${error.message}`
   }
-  $notify(`顺丰速运 · ${label}`, summary, tasks)
+  return { summary, tasks }
 }
 
 async function main() {
   const accounts = loadAccounts()
   if (!accounts.length) throw new Error('缺少会话，请先在顺丰 App 打开签到页')
+  const lines = []
+  let success = 0
   for (const account of accounts) {
+    const label = account.label || '账号'
     try {
-      await runAccount(account)
+      const result = await runAccount(account)
+      success++
+      lines.push(`${label}：${result.summary}${result.tasks ? `｜${result.tasks}` : ''}`)
     } catch (error) {
-      const label = account.label || '账号'
       console.log(`顺丰速运 ${label}：${error.message}`)
-      $notify(`顺丰速运 · ${label}`, '签到失败', `${error.message}；请切换到该账号并重新打开签到页`)
+      lines.push(`${label}：签到失败（${error.message}）`)
     }
   }
+  $notify('顺丰速运', `签到成功 ${success}/${accounts.length} 个账号`, lines.join('\n'))
 }
 
 main().catch(error => {
