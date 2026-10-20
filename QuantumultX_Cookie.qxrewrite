@@ -55,5 +55,5 @@ hostname = hrmapp.hitrontech.com, sytgate.jslife.com.cn, api.zfrontier.com, www.
 ;全家 GetCookie by blackmatrix7
 ^https?:\/\/fmapp\.chinafamilymart\.com\.cn\/api\/app\/market\/member\/(signin\/usersign|sign\/current) url script-request-header https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/script/famijia/famijia_checkin.js
 
-;考勤 App 登录与考勤查询：保存请求模板，17:20 重新登录后提醒
+;考勤 App 登录与考勤查询：保存登录请求与查询模板，17:20 重新登录后提醒
 ^https:\/\/hrmapp\.hitrontech\.com:9999\/scsrwd\/SCSService\.asmx url script-request-body https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/attendance-qx.js
