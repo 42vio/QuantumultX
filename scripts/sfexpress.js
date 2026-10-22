@@ -5,6 +5,127 @@ const signService = '~memberNonactivity~integralSignV2Service~'
 const taskService = '~memberNonactivity~integralTaskStrategyService~'
 const taskRoute = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonRoutePost/memberEs/taskRecord/finishTask'
 
+// Authentication only. Keep the original sign-in and daily-task flow below intact.
+function storedJson(key, fallback) {
+  try { return JSON.parse($prefs.valueForKey(key)) || fallback } catch (_) { return fallback }
+}
+
+function nativeHeader(sample, name) {
+  const headers = sample.request.headers || {}
+  const key = Object.keys(headers).find(key => key.toLowerCase() === name)
+  return key === undefined ? '' : headers[key]
+}
+
+function nativeSamples(accounts) {
+  const saved = storedJson('sfexpress_native_requests', [])
+  const diagnostic = storedJson('sfexpress_auth_diagnostics_v1', { events: [] })
+  const candidates = [
+    ...(Array.isArray(saved) ? saved : []),
+    ...accounts.map(account => account.nativeRequest).filter(Boolean),
+    ...(Array.isArray(diagnostic.events) ? diagnostic.events.filter(event => event.route === 'universalSign' && event.phase === 'request') : [])
+  ].filter(sample => sample && sample.request &&
+    /^https:\/\/ccsp-egmas\.sf-express\.com\/cx-app-member\/member\/app\/user\/universalSign(?:\?[^#]*)?$/.test(sample.request.url) &&
+    sample.request.method === 'POST' && typeof sample.request.body === 'string' && nativeHeader(sample, 'token'))
+    .sort((a, b) => (b.at || 0) - (a.at || 0))
+  const seen = new Set()
+  return candidates.filter(sample => {
+    const identity = JSON.stringify([nativeHeader(sample, 'token'), nativeHeader(sample, 'deviceid'), sample.request.body])
+    if (seen.has(identity)) return false
+    seen.add(identity)
+    return true
+  }).slice(0, 10)
+}
+
+function addResponseCookies(jar, headers) {
+  const key = Object.keys(headers || {}).find(key => key.toLowerCase() === 'set-cookie')
+  const raw = key ? headers[key] : []
+  for (const line of (Array.isArray(raw) ? raw : [raw])) {
+    // A comma in Expires is not a separator; only split before another name=value.
+    for (const item of String(line).split(/,(?=\s*[^\s;,=]+=)/)) {
+      const pair = item.split(';')[0].trim()
+      const equals = pair.indexOf('=')
+      if (equals < 1) continue
+      const name = pair.slice(0, equals)
+      if (/;\s*max-age\s*=\s*0(?:;|$)/i.test(item)) delete jar[name]
+      else jar[name] = pair.slice(equals + 1)
+    }
+  }
+}
+
+async function nativeWebCookie(sample) {
+  const headers = {}
+  Object.keys(sample.request.headers || {}).forEach(key => {
+    if (!/^(host|content-length|connection|accept-encoding|transfer-encoding|:.*)$/i.test(key)) headers[key] = sample.request.headers[key]
+  })
+  const opts = { redirection: false, 'auto-cookie': false }
+  const response = await $task.fetch({ ...sample.request, headers, opts })
+  const data = JSON.parse(response.body)
+  if (data.success !== true || !data.obj || typeof data.obj.sign !== 'string' || !data.obj.sign) throw new Error('App 换票失败')
+  const origin = 'https://mcs-mimp-web.sf-express.com'
+  const bizCode = '647@RnlvejM1R3VTSVZ6d3BNaXJxRFpOUVVtQkp0ZnFpNDBKdytobm5TQWxMeHpVUXVrVzVGMHVmTU5BVFA1bXlwcw=='
+  let url = `${origin}/mcs-mimp/share/app/shareRedirect?sign=${encodeURIComponent(data.obj.sign)}&source=SFAPP&bizCode=${encodeURIComponent(bizCode)}`
+  const jar = {}
+  for (let hop = 0; hop < 5; hop++) {
+    if (!/^https:\/\/mcs-mimp-web\.sf-express\.com\//.test(url)) throw new Error('Web 跳转域名不符')
+    const webHeaders = { 'User-Agent': nativeHeader(sample, 'user-agent') || 'Quantumult X' }
+    if (Object.keys(jar).length) webHeaders.Cookie = Object.keys(jar).map(name => `${name}=${jar[name]}`).join('; ')
+    const web = await $task.fetch({ url, method: 'GET', headers: webHeaders, opts })
+    addResponseCookies(jar, web.headers)
+    const cookie = Object.keys(jar).map(name => `${name}=${jar[name]}`).join('; ')
+    const status = Number(web.statusCode)
+    if (status >= 200 && status < 300) {
+      if (!accountId({ cookie })) throw new Error('Web 登录未返回账号标识')
+      return cookie
+    }
+    if (![301, 302, 303, 307, 308].includes(status)) throw new Error('Web 登录响应异常')
+    const locationKey = Object.keys(web.headers || {}).find(key => key.toLowerCase() === 'location')
+    const location = locationKey ? web.headers[locationKey] : ''
+    if (/^https:\/\/mcs-mimp-web\.sf-express\.com\//.test(location)) url = location
+    else if (/^\/(?!\/)/.test(location)) url = origin + location
+    // A final page can use another host. Validate the cookie without following it.
+    else if (accountId({ cookie })) return cookie
+    else throw new Error('Web 跳转地址不符')
+  }
+  throw new Error('Web 跳转次数超限')
+}
+
+async function renewAccounts(accounts) {
+  const updated = new Set()
+  const samples = nativeSamples(accounts)
+  for (const sample of samples) {
+    try {
+      const cookie = await nativeWebCookie(sample)
+      const id = accountId({ cookie })
+      const account = accounts.find(item => accountId(item.headers) === id)
+      if (!account || updated.has(id)) continue
+      const headers = { ...account.headers, cookie }
+      Object.keys(headers).forEach(key => {
+        if (/^(signature|timestamp)$/i.test(key) || (key !== 'cookie' && key.toLowerCase() === 'cookie')) delete headers[key]
+      })
+      const today = await request(signService + 'getTodaySign', {}, headers)
+      if (!today || typeof today.signed !== 'boolean') continue
+      // Bind only after the new Web identity matches and its login is confirmed.
+      account.headers = headers
+      account.nativeRequest = { at: sample.at, request: sample.request }
+      account.authSummary = 'App 换票已更新'
+      updated.add(id)
+      const state = storedJson(sessionsKey, { accounts: {} })
+      if (!state.accounts || typeof state.accounts !== 'object' || Array.isArray(state.accounts)) state.accounts = {}
+      state.accounts[id] = { ...state.accounts[id], headers, label: account.label, nativeRequest: account.nativeRequest }
+      if (!$prefs.setValueForKey(JSON.stringify(state), sessionsKey)) account.authSummary += '（本地保存失败）'
+      if (updated.size === accounts.length) break
+    } catch (_) {
+      // Native responses, redirect URLs and exceptions may contain secrets.
+      // Leave the saved Web session usable if native login was revoked.
+    }
+  }
+  for (const account of accounts) {
+    if (!account.authSummary && (account.nativeRequest || samples.length)) {
+      account.authSummary = account.nativeRequest ? 'App 换票未成功，使用原 Web 会话' : '未取得匹配的 App 会话，使用原 Web 会话'
+    }
+  }
+}
+
 function request(path, body, headers, absolute = false, requireObj = true) {
   return $task.fetch({
     url: absolute ? path : base + path,
@@ -118,6 +239,7 @@ async function runAccount(account) {
 async function main() {
   const accounts = loadAccounts()
   if (!accounts.length) throw new Error('缺少会话，请先在顺丰 App 打开签到页')
+  await renewAccounts(accounts)
   const lines = []
   let success = 0
   for (const account of accounts) {
@@ -125,10 +247,10 @@ async function main() {
     try {
       const result = await runAccount(account)
       success++
-      lines.push(`${label}：${result.summary}${result.tasks ? `｜${result.tasks}` : ''}`)
+      lines.push(`${label}：${result.summary}${result.tasks ? `｜${result.tasks}` : ''}${account.authSummary ? `｜${account.authSummary}` : ''}`)
     } catch (error) {
       console.log(`顺丰速运 ${label}：${error.message}`)
-      lines.push(`${label}：签到失败（${error.message}）`)
+      lines.push(`${label}：签到失败（${error.message}）${account.authSummary ? `｜${account.authSummary}` : ''}`)
     }
   }
   $notify('顺丰速运', `签到成功 ${success}/${accounts.length} 个账号`, lines.join('\n'))

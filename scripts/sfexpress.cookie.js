@@ -53,7 +53,7 @@ function main() {
     }
   }
   const label = accountLabel(saved, id)
-  state.accounts[id] = { headers: saved, label }
+  state.accounts[id] = { ...state.accounts[id], headers: saved, label }
   if ($prefs.setValueForKey(JSON.stringify(state), sessionsKey)) {
     $notify('顺丰速运', `${label} 会话已更新`, `已保存 ${Object.keys(state.accounts).length} 个账号`)
   } else {
