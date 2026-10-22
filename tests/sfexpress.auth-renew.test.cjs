@@ -35,13 +35,12 @@ async function run(store, fetch, file = 'sfexpress.js', extra = {}) {
   return { calls, output: output.join('\n') }
 }
 
-test('reuses tested native request and collects redirect cookies before sign-in and tasks', async () => {
+test('reuses tested native request, collects redirect cookies, and preserves task request flow', async () => {
   const native = sample('private-token')
   const store = {
     [key]: JSON.stringify({ accounts: { '5031': account('5031') } }),
     sfexpress_auth_diagnostics_v1: JSON.stringify({ events: [{ ...native, route: 'universalSign', phase: 'request' }] }),
   }
-  let queries = 0
   const fetch = request => {
     if (request.url === nativeUrl) {
       assert.equal(request.headers.requestSign, native.request.headers.requestSign)
@@ -67,21 +66,20 @@ test('reuses tested native request and collects redirect cookies before sign-in 
     if (request.url.endsWith('getTodaySign')) return success({ signed: false })
     if (request.url.endsWith('~sign')) return success({ signed: true, dayCount: 2 })
     if (request.url.endsWith('queryPointTaskAndSignFromES')) return success({ taskTitleLevels: [
-      { status: ++queries % 2 ? 1 : 3, strategyId: 10, taskId: 'claim', taskCode: 'C' },
-      { status: queries % 2 ? 2 : 1, strategyId: 20, taskId: 'finish', taskCode: 'F', actionType: '07', buttonRedirect: '/partner' },
+      { status: 1, strategyId: 10, taskId: 'claim', taskCode: 'C' },
+      { status: 2, strategyId: 20, taskId: 'finish', taskCode: 'F' },
       { status: 3, strategyId: 30, taskId: 'skip', taskCode: 'S' },
     ] })
     return success(null)
   }
   const result = await run(store, fetch)
-  assert.ok(result.output.includes('每日任务领取 2 项，需手动 0 项｜App 换票已更新'))
+  assert.ok(result.output.includes('每日任务领取 2 项，未完成 0 项｜App 换票已更新'))
   const tasks = result.calls.filter(item => /queryPointTaskAndSignFromES|finishTask|fetchIntegral/.test(item.url))
   assert.deepEqual(tasks.map(item => JSON.parse(item.body)), [
     { channelType: '1', deviceId: 'web-device' },
-    { strategyId: 10, taskId: 'claim', taskCode: 'C', deviceId: 'web-device' },
+    { strategyId: 10, taskId: 'claim', taskCode: 'C', channelType: '1' },
     { taskCode: 'F' },
-    { channelType: '1', deviceId: 'web-device' },
-    { strategyId: 20, taskId: 'finish', taskCode: 'F', deviceId: 'web-device' },
+    { strategyId: 20, taskId: 'finish', taskCode: 'F', channelType: '1' },
   ])
   assert.equal(JSON.parse(store[key]).accounts['5031'].nativeRequest.request.headers.token, 'private-token')
   assert.ok(!result.output.includes('private-'))
@@ -139,7 +137,7 @@ test('without native samples uses original Web flow and notification', async () 
   const store = { [key]: JSON.stringify({ accounts: { '5031': account('5031') } }) }
   const result = await run(store, request => request.url.endsWith('getTodaySign') ? success({ signed: true, dayCount: 1 }) : success({ taskTitleLevels: [] }))
   assert.equal(result.calls.length, 2)
-  assert.ok(result.output.includes('今日已签到，连续 1 天｜每日任务领取 0 项，需手动 0 项'))
+  assert.ok(result.output.includes('今日已签到，连续 1 天｜每日任务领取 0 项，未完成 0 项'))
   assert.ok(!result.output.includes('App 换票'))
 })
 
