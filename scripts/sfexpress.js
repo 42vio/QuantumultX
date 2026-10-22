@@ -177,6 +177,88 @@ function loadAccounts() {
   return Object.values(accounts)
 }
 
+async function runDailyTasks(headers, label) {
+  const contexts = storedJson('sfexpress_task_contexts', { accounts: {} })
+  const context = contexts.accounts && contexts.accounts[accountId(headers)] || {}
+  // The H5 myPoints_UUID is distinct from the native App's deviceId.
+  const deviceId = context.deviceId || headers.deviceId || headers.deviceid || ''
+  if (!context.deviceId) console.log(`${label} 每日任务：尚未采集积分页设备标识，请更新重写后重新打开积分页`)
+  const query = async () => {
+    const result = await request(taskService + 'queryPointTaskAndSignFromES', {
+      channelType: context.channelType || '1', deviceId
+    }, headers)
+    if (!Array.isArray(result.taskTitleLevels)) throw new Error('每日任务列表格式已变化')
+    return result.taskTitleLevels
+  }
+  const claim = task => request(taskService + 'fetchIntegral', {
+    strategyId: task.strategyId, taskId: task.taskId, taskCode: task.taskCode, deviceId
+  }, headers, false, false)
+  const completeByClick = task => {
+    const title = task.title || ''
+    if (title.includes('浏览寄件')) return true
+    if (task.actionType === '06' && title.includes('包裹进度')) return true
+    // The official page uses another endpoint for 大众点评; do not substitute finishTask.
+    return task.actionType === '07' && !title.includes('大众') &&
+      (!!task.buttonRedirect || ['咪咕', '微博', '掌阅', '生鲜', '快手', '滴滴', '虎牙'].some(name => title.includes(name)))
+  }
+  const identifiers = task => !!task.taskCode && task.strategyId != null && !!task.taskId
+  const describe = task => `${label} 每日任务 ${task.title || '未命名任务'}（状态 ${task.status}，类型 ${task.actionType || '未知'}）`
+  let claimed = 0
+  let manual = 0
+  let pending = 0
+  let failed = 0
+  const completed = []
+  const tasks = await query()
+  for (const task of tasks) {
+    if (task.status !== 1 && task.status !== 2) continue
+    if (task.status === 2 && (!completeByClick(task) || !identifiers(task))) {
+      manual++
+      console.log(`${describe(task)}：需在 App 完成对应操作，未发送通用完成或领奖请求`)
+      continue
+    }
+    if (!identifiers(task)) {
+      failed++
+      console.log(`${describe(task)}：待领取任务缺少领奖标识，未发送请求`)
+      continue
+    }
+    try {
+      if (task.status === 1) {
+        await claim(task)
+        claimed++
+      } else {
+        await request(taskRoute, { taskCode: task.taskCode }, headers, true, false)
+        completed.push(task)
+      }
+    } catch (error) {
+      failed++
+      console.log(`${describe(task)}：${task.status === 1 ? '领奖' : '完成任务'}失败：${error.message}`)
+    }
+  }
+  if (completed.length) {
+    let refreshed
+    try { refreshed = await query() } catch (error) {
+      failed += completed.length
+      console.log(`${label} 每日任务状态复查失败，未发送后续领奖请求：${error.message}`)
+    }
+    if (refreshed) for (const old of completed) {
+      const task = refreshed.find(item => item.taskId === old.taskId && item.strategyId === old.strategyId && item.taskCode === old.taskCode)
+      if (!task) {
+        pending++
+        console.log(`${describe(old)}：复查未找到同一任务，未发送领奖请求`)
+      } else if (task.status === 1 && identifiers(task)) {
+        try { await claim(task); claimed++ } catch (error) {
+          failed++
+          console.log(`${describe(task)}：领奖失败：${error.message}`)
+        }
+      } else if (task.status !== 3) {
+        pending++
+        console.log(`${describe(task)}：已发送完成请求，服务端尚未确认可领取，未发送领奖请求`)
+      }
+    }
+  }
+  return `每日任务领取 ${claimed} 项，需手动 ${manual} 项${pending ? `，待确认 ${pending} 项` : ''}${failed ? `，失败 ${failed} 项` : ''}`
+}
+
 async function runAccount(account) {
   const headers = { ...account.headers }
   const label = account.label || '账号'
@@ -202,34 +284,7 @@ async function runAccount(account) {
 
   let tasks = ''
   try {
-    const result = await request(taskService + 'queryPointTaskAndSignFromES', {
-      channelType: '1',
-      deviceId: headers.deviceId || headers.deviceid || ''
-    }, headers)
-    if (!Array.isArray(result.taskTitleLevels)) throw new Error('每日任务列表格式已变化')
-    const pending = result.taskTitleLevels.filter(task => task.status === 1 || task.status === 2)
-    let claimed = 0
-    let failed = 0
-    for (const task of pending) {
-      if (!task.taskCode || task.strategyId == null || !task.taskId) {
-        failed++
-        continue
-      }
-      try {
-        if (task.status === 2) await request(taskRoute, { taskCode: task.taskCode }, headers, true, false)
-        await request(taskService + 'fetchIntegral', {
-          strategyId: task.strategyId,
-          taskId: task.taskId,
-          taskCode: task.taskCode,
-          channelType: '1'
-        }, headers, false, false)
-        claimed++
-      } catch (error) {
-        failed++
-        console.log(`${label} 每日任务 ${task.title || task.taskCode}：${error.message}`)
-      }
-    }
-    tasks = `每日任务领取 ${claimed} 项，未完成 ${failed} 项`
+    tasks = await runDailyTasks(headers, label)
   } catch (error) {
     tasks = `每日任务查询失败：${error.message}`
   }
