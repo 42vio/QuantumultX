@@ -1,6 +1,0 @@
-# 临时诊断：采集后禁用；凭据仅存在本机，不上传。
-# 与原 QuantumultX_Cookie.qxrewrite 独立，不替换签到规则。
-hostname = ccsp-egmas.sf-express.com
-
-^https:\/\/ccsp-egmas\.sf-express\.com\/cx-app-member\/member\/app\/user\/universalSign(?:\?|$) url script-request-body https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/sfexpress.auth-capture.js
-^https:\/\/ccsp-egmas\.sf-express\.com\/cx-app-member\/member\/app\/user\/(?:universalSign|signInAndSignUp|loginOrRegister)(?:\?|$) url script-response-body https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/sfexpress.auth-capture.js
