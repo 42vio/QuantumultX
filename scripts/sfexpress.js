@@ -1,6 +1,7 @@
 const base = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonPost/'
 const sessionsKey = 'sfexpress_web_sessions'
 const legacyKey = 'sfexpress_web_session'
+const appSessionsKey = 'sfexpress_app_sessions'
 const signService = '~memberNonactivity~integralSignV2Service~'
 const taskService = '~memberNonactivity~integralTaskStrategyService~'
 const taskRoute = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonRoutePost/memberEs/taskRecord/finishTask'
@@ -10,7 +11,8 @@ function request(path, body, headers, absolute = false, requireObj = true) {
     url: absolute ? path : base + path,
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    opts: { 'auto-cookie': false }
   }).then(response => {
     let data
     try {
@@ -53,11 +55,80 @@ function loadAccounts() {
     const id = accountId(headers)
     if (id && !accounts[id]) accounts[id] = { headers, label: accountLabel(headers, id) }
   }
-  return Object.values(accounts)
+  const appRaw = $prefs.valueForKey(appSessionsKey)
+  const appState = appRaw ? JSON.parse(appRaw) : { accounts: {} }
+  if (!appState.accounts || typeof appState.accounts !== 'object' || Array.isArray(appState.accounts)) {
+    throw new Error('已保存的 App 账号列表格式错误')
+  }
+  for (const id of Object.keys(appState.accounts)) accounts[id] = { ...accounts[id], ...appState.accounts[id] }
+  return Object.entries(accounts).map(([id, account]) => ({ ...account, id }))
+}
+
+function headerValue(headers, name) {
+  const key = Object.keys(headers || {}).find(key => key.toLowerCase() === name)
+  return key ? headers[key] : ''
+}
+
+async function createWebSession(account) {
+  const app = account.app
+  if (!app || !/^https:\/\/ccsp-egmas\.sf-express\.com\/cx-app-member\/member\/app\/user\/universalSign(?:\?|$)/.test(app.url)) {
+    throw new Error('App 认证请求地址无效，请重新打开积分页')
+  }
+  // Native signatures cover the request: preserve the original body and headers.
+  // Whether these signatures can be replayed long-term needs real-device testing.
+  const response = await $task.fetch({
+    url: app.url, method: 'POST', headers: app.headers, body: app.body,
+    opts: { redirection: false, 'auto-cookie': false }
+  })
+  let data
+  try { data = JSON.parse(response.body) } catch (_) { throw new Error(`App 换取会话返回非 JSON（HTTP ${response.statusCode}）`) }
+  if (!data || data.success !== true || data.notSuccess === true || !data.obj || typeof data.obj.sign !== 'string' || !data.obj.sign) {
+    throw new Error('App 换取会话失败，原生登录态或签名可能失效，请重新打开积分页采集')
+  }
+  const cookies = {}
+  // Public member-center route in the official download page configuration.
+  const bizCode = '6@amVBcTNRL0R4TzJmeE5CNE96WHZFS3ZsS2dkSzB4Y3ZqVjBBblRtVHhiTT0='
+  let url = `https://mcs-mimp-web.sf-express.com/mcs-mimp/share/app/shareRedirect?sign=${encodeURIComponent(data.obj.sign)}&source=SFAPP&bizCode=${encodeURIComponent(bizCode)}`
+  const headers = {}
+  const userAgent = headerValue(account.headers, 'user-agent') || headerValue(app.headers, 'user-agent')
+  if (userAgent) headers['user-agent'] = userAgent
+  for (let count = 0; count < 6; count++) {
+    const result = await $task.fetch({
+      url, method: 'GET', headers: { ...headers, cookie: Object.values(cookies).join('; ') },
+      opts: { redirection: false, 'auto-cookie': false }
+    })
+    const setCookie = headerValue(result.headers, 'set-cookie')
+    const values = Array.isArray(setCookie) ? setCookie : String(setCookie || '').split(/,(?=\s*[^\s;,=]+=)/)
+    for (const value of values) {
+      const pair = value.split(';')[0].trim()
+      const index = pair.indexOf('=')
+      if (index <= 0) continue
+      const name = pair.slice(0, index)
+      if (/;\s*max-age=0(?:;|$)/i.test(value) || !pair.slice(index + 1)) delete cookies[name]
+      else cookies[name] = pair
+    }
+    const cookie = Object.values(cookies).join('; ')
+    const id = accountId({ cookie })
+    if (id) {
+      if (id !== account.id) throw new Error('换取的会话账号不匹配，已停止该账号签到')
+      return { ...(account.headers || {}), ...headers, cookie }
+    }
+    const location = headerValue(result.headers, 'location')
+    if (result.statusCode < 300 || result.statusCode >= 400 || !location) break
+    if (location.startsWith('/') && !location.startsWith('//')) url = 'https://mcs-mimp-web.sf-express.com' + location
+    else if (/^https:\/\/mcs-mimp-web\.sf-express\.com\//.test(location)) url = location
+    else throw new Error('登录跳转到了其他站点，未继续发送会话')
+  }
+  throw new Error('App 登录跳转未返回账号 Cookie，需检查手机上的实际跳转流程')
 }
 
 async function runAccount(account) {
-  const headers = { ...account.headers }
+  const headers = account.app ? await createWebSession(account) : { ...account.headers }
+  if (account.app) {
+    for (const key of Object.keys(headers)) {
+      if (/^(signature|timestamp)$/i.test(key) || /^cookie$/i.test(key) && key !== 'cookie') delete headers[key]
+    }
+  }
   const label = account.label || '账号'
   let today
   try {
@@ -117,7 +188,7 @@ async function runAccount(account) {
 
 async function main() {
   const accounts = loadAccounts()
-  if (!accounts.length) throw new Error('缺少会话，请先在顺丰 App 打开签到页')
+  if (!accounts.length) throw new Error('缺少会话，请更新重写后在顺丰 App 打开积分签到页')
   const lines = []
   let success = 0
   for (const account of accounts) {

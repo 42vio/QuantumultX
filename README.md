@@ -2,7 +2,9 @@
 
 ## 顺丰速运签到
 
-`scripts/sfexpress.cookie.js` 在顺丰 App 积分签到页返回有效登录状态后，按账号保存 Web 会话到 Quantumult X 本地偏好设置；`scripts/sfexpress.js` 逐个账号用新版接口签到，随后尝试领取每日任务积分，并将所有账号的结果合并为一条通知。更新重写和任务订阅后，依次登录每个账号并进入签到页，确认各账号都出现“会话已更新”通知，再手动运行任务验证。旧版单账号会话会自动纳入账号列表。若某账号提示用户信息失效，需要切换到该账号重新登录并进入签到页；如果切换账号会使前一个会话失效，则无法仅靠保存多个会话实现定时多账号签到。仓库不保存抓包中的 Cookie 或个人信息。
+`scripts/sfexpress.cookie.js` 分别保存 App 的 `universalSign` 原生认证请求和签到页 Web 会话，数据仅保存在 Quantumult X 本地偏好设置。`scripts/sfexpress.js` 优先重放该账号的原生认证请求，获取新的 `sign`，通过 `shareRedirect` 换取新的 Cookie，再查询/执行签到和领取每日任务积分，最后合并所有账号的通知。不同账号使用独立 Cookie；换得的账号标识不匹配时停止该账号操作。未采集 App 请求的旧账号暂时沿用原来的 Web 会话。
+
+更新重写及任务脚本后，使用支持 `auto-cookie: false` 的 Quantumult X（build 934+），依次登录每个账号并打开积分签到页，确认出现“App 认证请求已保存”和“会话已更新”通知。手动运行一次后，关闭顺丰 App，超过 15 分钟再次运行，并在次日复测。**当前仅完成静态分析和本地模拟测试，未验证 iPhone 原生请求签名的重放有效期；不能保证已解决长期失效。** 若提示“App 换取会话失败”，需继续分析原生签名/登录态，反复保存 Web Cookie 无法解决。多账号登录互踢也可能使旧账号的 App 登录态失效。分析记录见 [docs/sfexpress-auth-analysis.md](docs/sfexpress-auth-analysis.md)。
 
 
 ## 下班打卡提醒（Quantumult X）
