@@ -113,7 +113,7 @@ test('stops before signing when native auth expires or returns another account',
       if (scenario === 'foreign-redirect') return response(null, 302, { location: 'https://example.com/collect' })
       return response(null, 302, { 'set-cookie': '_login_user_id_=B; Path=/' })
     })
-    assert.equal(calls.length, scenario === 'expired' ? 1 : 2)
+    assert.equal(calls.length, scenario === 'expired' ? 3 : 2)
     assert.match(result.notifications[0][1], /0\/1/)
     assert.doesNotMatch(JSON.stringify(result), /PRIVATE/)
   }
@@ -128,29 +128,47 @@ test('preserves legacy Web-only accounts', async () => {
   assert.match(result.notifications[0][1], /1\/1/)
 })
 
-test('only claims ready tasks and never reports unfinished business actions as completed', async () => {
+test('restores status-2 completion before claiming and preserves individual failures', async () => {
   const preferences = { sfexpress_web_session: JSON.stringify({ cookie: '_login_user_id_=A' }) }
-  const claimed = []
+  const actions = []
   const result = await execute('scripts/sfexpress.js', preferences, async request => {
-    assert.doesNotMatch(request.url, /finishTask/)
     if (request.url.endsWith('getTodaySign')) return response({ signed: true })
+    if (request.url.endsWith('finishTask')) {
+      const task = JSON.parse(request.body)
+      actions.push(`finish:${task.taskCode}`)
+      return response(null)
+    }
     if (request.url.endsWith('fetchIntegral')) {
       const task = JSON.parse(request.body)
-      claimed.push(task.taskId)
-      if (task.taskId === 'stale') return { statusCode: 200, body: '{"success":false,"errorMessage":"任务未完成"}' }
+      actions.push(`claim:${task.taskId}`)
+      if (task.taskId === 'shipment') return { statusCode: 200, body: '{"success":false,"errorMessage":"任务未完成"}' }
       return response(null)
     }
     return response({ taskTitleLevels: [
-      { status: 1, taskId: 'ready', taskCode: 'ready-code', strategyId: 1 },
-      { status: 1, taskId: 'stale', taskCode: 'stale-code', strategyId: 2 },
-      { status: 2, taskId: 'shipment', taskCode: 'shipment-code', strategyId: 3 },
-      { status: 3, taskId: 'claimed', taskCode: 'claimed-code', strategyId: 4 }
+      { status: 1, taskId: 'ready', taskCode: 'ready', strategyId: 1 },
+      { status: 2, taskId: 'browse', taskCode: 'browse', strategyId: 2 },
+      { status: 2, taskId: 'shipment', taskCode: 'shipment', strategyId: 3 },
+      { status: 3, taskId: 'claimed', taskCode: 'claimed', strategyId: 4 }
     ] })
   })
-  assert.deepEqual(claimed, ['ready', 'stale'])
-  assert.match(result.notifications[0][2], /领取 1 项，待完成 2 项/)
-  assert.doesNotMatch(JSON.stringify(result.logs), /任务未完成/)
-  assert.doesNotMatch(result.notifications[0][2], /领取失败/)
+  assert.deepEqual(actions, ['claim:ready', 'finish:browse', 'claim:browse', 'finish:shipment', 'claim:shipment'])
+  assert.match(result.notifications[0][2], /领取 2 项，未完成 1 项/)
+  assert.match(JSON.stringify(result.logs), /任务未完成/)
+})
+
+test('a rejected native request falls back to a validated same-account Web session', async () => {
+  const preferences = { sfexpress_app_sessions: JSON.stringify({ accounts: { A: nativeAccount('A') } }) }
+  const calls = []
+  const result = await execute('scripts/sfexpress.js', preferences, async request => {
+    calls.push(request.url)
+    if (request.url === appUrl) return { statusCode: 401, body: '{"success":false,"code":"600"}' }
+    assert.match(request.headers.cookie, /_login_user_id_=A/)
+    if (request.url.endsWith('getTodaySign')) return response({ signed: true })
+    return response({ taskTitleLevels: [] })
+  })
+  assert.equal(calls.length, 3)
+  assert.match(result.notifications[0][1], /1\/1/)
+  assert.match(result.notifications[0][2], /使用已保存的 Web 会话，App 换票失败/)
 })
 
 test('reports an auth rejection code and category without leaking server-echoed credentials', async () => {

@@ -4,6 +4,7 @@ const legacyKey = 'sfexpress_web_session'
 const appSessionsKey = 'sfexpress_app_sessions'
 const signService = '~memberNonactivity~integralSignV2Service~'
 const taskService = '~memberNonactivity~integralTaskStrategyService~'
+const taskRoute = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonRoutePost/memberEs/taskRecord/finishTask'
 
 function request(path, body, headers, absolute = false, requireObj = true) {
   return $task.fetch({
@@ -95,7 +96,9 @@ async function createWebSession(account) {
   let data
   try { data = JSON.parse(response.body) } catch (_) { throw new Error(`App 换取会话返回非 JSON（HTTP ${response.statusCode}）`) }
   if (!data || data.success !== true || data.notSuccess === true || !data.obj || typeof data.obj.sign !== 'string' || !data.obj.sign) {
-    throw new Error(`App 换取会话失败（${authFailureDetail(response, data)}）；请先单独采集并运行此账号，再切换账号对比`)
+    const error = new Error(`App 换取会话失败（${authFailureDetail(response, data)}）；请先单独采集并运行此账号，再切换账号对比`)
+    error.authRejected = true
+    throw error
   }
   const cookies = {}
   // Public member-center route in the official download page configuration.
@@ -135,8 +138,21 @@ async function createWebSession(account) {
 }
 
 async function runAccount(account) {
-  const headers = account.app ? await createWebSession(account) : { ...account.headers }
+  let headers = { ...account.headers }
+  let renewed = false
+  let authError
   if (account.app) {
+    try {
+      headers = await createWebSession(account)
+      renewed = true
+    } catch (error) {
+      // A rejected native request must not block an otherwise valid captured Web session.
+      // Never fall back after an identity mismatch or an unexpected login redirect.
+      if (!error.authRejected || accountId(headers) !== account.id) throw error
+      authError = error
+    }
+  }
+  if (renewed) {
     for (const key of Object.keys(headers)) {
       if (/^(signature|timestamp)$/i.test(key) || /^cookie$/i.test(key) && key !== 'cookie') delete headers[key]
     }
@@ -146,10 +162,15 @@ async function runAccount(account) {
   try {
     today = await request(signService + 'getTodaySign', {}, headers)
   } catch (error) {
-    if (!headers.signature && !headers.timestamp) throw error
-    delete headers.signature
-    delete headers.timestamp
-    today = await request(signService + 'getTodaySign', {}, headers)
+    try {
+      if (!headers.signature && !headers.timestamp) throw error
+      delete headers.signature
+      delete headers.timestamp
+      today = await request(signService + 'getTodaySign', {}, headers)
+    } catch (webError) {
+      if (authError) throw new Error(`${authError.message}；已保存的 Web 会话也未通过登录验证`)
+      throw webError
+    }
   }
   if (typeof today.signed !== 'boolean') throw new Error('今日签到状态格式已变化')
 
@@ -169,18 +190,16 @@ async function runAccount(account) {
       deviceId: headers.deviceId || headers.deviceid || ''
     }, headers)
     if (!Array.isArray(result.taskTitleLevels)) throw new Error('每日任务列表格式已变化')
-    // status 1 is claimable; status 2 requires the actual business action in the App.
-    // Reporting finishTask cannot complete shipments, profile settings, etc.
-    const pending = result.taskTitleLevels.filter(task => task.status === 1)
+    const pending = result.taskTitleLevels.filter(task => task.status === 1 || task.status === 2)
     let claimed = 0
     let failed = 0
-    let skipped = result.taskTitleLevels.filter(task => task.status !== 1 && task.status !== 3).length
     for (const task of pending) {
       if (!task.taskCode || task.strategyId == null || !task.taskId) {
         failed++
         continue
       }
       try {
+        if (task.status === 2) await request(taskRoute, { taskCode: task.taskCode }, headers, true, false)
         await request(taskService + 'fetchIntegral', {
           strategyId: task.strategyId,
           taskId: task.taskId,
@@ -189,18 +208,15 @@ async function runAccount(account) {
         }, headers, false, false)
         claimed++
       } catch (error) {
-        if (/任务未完成/.test(error.message)) {
-          skipped++
-          continue
-        }
         failed++
         console.log(`${label} 每日任务 ${task.title || task.taskCode}：${error.message}`)
       }
     }
-    tasks = `每日任务领取 ${claimed} 项，待完成 ${skipped} 项${failed ? `，领取失败 ${failed} 项` : ''}`
+    tasks = `每日任务领取 ${claimed} 项，未完成 ${failed} 项`
   } catch (error) {
     tasks = `每日任务查询失败：${error.message}`
   }
+  if (authError) summary += '（使用已保存的 Web 会话，App 换票失败）'
   return { summary, tasks }
 }
 
