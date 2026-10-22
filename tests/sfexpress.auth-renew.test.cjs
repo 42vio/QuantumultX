@@ -17,6 +17,7 @@ const account = id => ({ headers: { cookie: `_login_user_id_=${id}; session=old`
 async function run(store, fetch, file = 'sfexpress.js', extra = {}) {
   const calls = []
   const output = []
+  const delays = []
   await new Promise((resolve, reject) => {
     try {
       vm.runInNewContext(fs.readFileSync(path.join(scripts, file), 'utf8'), {
@@ -27,12 +28,13 @@ async function run(store, fetch, file = 'sfexpress.js', extra = {}) {
         $task: { fetch: async request => { calls.push(request); return fetch(request) } },
         $notify: (...args) => output.push(args.join('\n')),
         console: { log: line => output.push(line) },
+        setTimeout: (callback, ms) => { delays.push({ ms, after: calls.length }); callback() },
         $done: resolve,
         ...extra,
       })
     } catch (error) { reject(error) }
   })
-  return { calls, output: output.join('\n') }
+  return { calls, delays, output: output.join('\n') }
 }
 
 test('reuses tested native request, collects redirect cookies, and preserves task request flow', async () => {
@@ -73,6 +75,7 @@ test('reuses tested native request, collects redirect cookies, and preserves tas
     return success(null)
   }
   const result = await run(store, fetch)
+  assert.deepEqual(result.delays, [{ ms: 1000, after: 1 }, { ms: 1000, after: 3 }, { ms: 1000, after: 6 }])
   assert.ok(result.output.includes('每日任务领取 2 项，未完成 0 项｜App 换票已更新'))
   const tasks = result.calls.filter(item => /queryPointTaskAndSignFromES|finishTask|fetchIntegral/.test(item.url))
   assert.deepEqual(tasks.map(item => JSON.parse(item.body)), [

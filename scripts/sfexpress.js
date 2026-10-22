@@ -5,6 +5,10 @@ const signService = '~memberNonactivity~integralSignV2Service~'
 const taskService = '~memberNonactivity~integralTaskStrategyService~'
 const taskRoute = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonRoutePost/memberEs/taskRecord/finishTask'
 
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 // Authentication only. Keep the original sign-in and daily-task flow below intact.
 function storedJson(key, fallback) {
   try { return JSON.parse($prefs.valueForKey(key)) || fallback } catch (_) { return fallback }
@@ -61,6 +65,7 @@ async function nativeWebCookie(sample) {
   const response = await $task.fetch({ ...sample.request, headers, opts })
   const data = JSON.parse(response.body)
   if (data.success !== true || !data.obj || typeof data.obj.sign !== 'string' || !data.obj.sign) throw new Error('App 换票失败')
+  await wait(1000)
   const origin = 'https://mcs-mimp-web.sf-express.com'
   const bizCode = '647@RnlvejM1R3VTSVZ6d3BNaXJxRFpOUVVtQkp0ZnFpNDBKdytobm5TQWxMeHpVUXVrVzVGMHVmTU5BVFA1bXlwcw=='
   let url = `${origin}/mcs-mimp/share/app/shareRedirect?sign=${encodeURIComponent(data.obj.sign)}&source=SFAPP&bizCode=${encodeURIComponent(bizCode)}`
@@ -95,6 +100,7 @@ async function renewAccounts(accounts) {
   for (const sample of samples) {
     try {
       const cookie = await nativeWebCookie(sample)
+      await wait(1000)
       const id = accountId({ cookie })
       const account = accounts.find(item => accountId(item.headers) === id)
       if (!account || updated.has(id)) continue
@@ -200,6 +206,7 @@ async function runAccount(account) {
     summary = `签到成功，连续 ${result.dayCount || 0} 天`
   }
 
+  await wait(1000)
   let tasks = ''
   try {
     const result = await request(taskService + 'queryPointTaskAndSignFromES', {
