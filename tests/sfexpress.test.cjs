@@ -180,3 +180,48 @@ test('reports an auth rejection code and category without leaking server-echoed 
   assert.match(result.notifications[0][2], /HTTP 401，错误码 SESSION_EXPIRED，登录态无效或过期/)
   assert.doesNotMatch(JSON.stringify(result), /PRIVATE_COOKIE/)
 })
+
+test('captures task Web UUID separately per account without overwriting login sessions', async () => {
+  const preferences = { sfexpress_web_sessions: '{"accounts":{}}' }
+  const url = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonPost/~memberNonactivity~integralTaskStrategyService~queryPointTaskAndSignFromES'
+  for (const id of ['A', 'B']) {
+    const result = await execute('scripts/sfexpress.cookie.js', preferences, null, {
+      url, headers: { cookie: `_login_user_id_=${id}`, deviceid: 'NATIVE_DEVICE' },
+      body: JSON.stringify({ channelType: '1', deviceId: `PRIVATE_WEB_UUID_${id}` })
+    })
+    assert.doesNotMatch(JSON.stringify(result), /PRIVATE_WEB_UUID|NATIVE_DEVICE/)
+  }
+  const contexts = JSON.parse(preferences.sfexpress_task_contexts).accounts
+  assert.equal(contexts.A.deviceId, 'PRIVATE_WEB_UUID_A')
+  assert.equal(contexts.B.deviceId, 'PRIVATE_WEB_UUID_B')
+  assert.equal(preferences.sfexpress_web_sessions, '{"accounts":{}}')
+})
+
+test('uses captured Web UUID for both task query and claim; preserves original parameters without capture', async () => {
+  for (const captured of [false, true]) {
+    const preferences = {
+      sfexpress_web_session: JSON.stringify({ cookie: '_login_user_id_=A', deviceid: 'NATIVE_DEVICE' }),
+      ...(captured ? { sfexpress_task_contexts: JSON.stringify({ accounts: { A: { deviceId: 'WEB_UUID', channelType: '2' } } }) } : {})
+    }
+    const calls = []
+    const result = await execute('scripts/sfexpress.js', preferences, async request => {
+      if (request.url.endsWith('getTodaySign')) return response({ signed: true })
+      const body = JSON.parse(request.body)
+      if (request.url.endsWith('queryPointTaskAndSignFromES')) {
+        assert.deepEqual(body, captured ? { channelType: '2', deviceId: 'WEB_UUID' } : { channelType: '1' })
+        calls.push('query')
+        return response({ taskTitleLevels: [{ status: 2, taskId: 'browse', strategyId: 1, taskCode: 'browse' }] })
+      }
+      if (request.url.endsWith('finishTask')) {
+        assert.deepEqual(body, { taskCode: 'browse' })
+        calls.push('finish')
+        return response(null)
+      }
+      assert.deepEqual(body, { strategyId: 1, taskId: 'browse', taskCode: 'browse', ...(captured ? { deviceId: 'WEB_UUID' } : { channelType: '1' }) })
+      calls.push('claim')
+      return response(null)
+    })
+    assert.deepEqual(calls, ['query', 'finish', 'claim'])
+    assert.match(result.notifications[0][2], /领取 1 项/)
+  }
+})

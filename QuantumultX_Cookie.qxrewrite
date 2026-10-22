@@ -23,6 +23,8 @@ hostname = hrmapp.hitrontech.com, sytgate.jslife.com.cn, api.zfrontier.com, www.
 ^https:\/\/ccsp-egmas\.sf-express\.com\/cx-app-member\/member\/app\/user\/universalSign(?:\?|$) url script-request-body https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/sfexpress.cookie.js
 ^https:\/\/mcs-mimp-web\.sf-express\.com\/mcs-mimp\/commonPost\/~memberNonactivity~integralSignV2Service~getTodaySign url script-response-body https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/sfexpress.cookie.js
 
+^https:\/\/mcs-mimp-web\.sf-express\.com\/mcs-mimp\/commonPost\/~memberNonactivity~integralTaskStrategyService~queryPointTaskAndSignFromES(?:\?|$) url script-request-body https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/sfexpress.cookie.js
+
 ;联通 GetCookie by chavyleung
 ^https:\/\/wapside.189.cn:9001\/api\/home\/homeInfo url script-request-body https://raw.githubusercontent.com/chavyleung/scripts/master/10000/10000.cookie.js
 

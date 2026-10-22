@@ -2,6 +2,7 @@
 const sessionsKey = 'sfexpress_web_sessions'
 const legacyKey = 'sfexpress_web_session'
 const appSessionsKey = 'sfexpress_app_sessions'
+const taskContextsKey = 'sfexpress_task_contexts'
 const requestHeaders = $request.headers || {}
 
 function cookieValue(cookie, name) {
@@ -22,6 +23,20 @@ function accountLabel(headers, id) {
 }
 
 function main() {
+  if (/^https:\/\/mcs-mimp-web\.sf-express\.com\/mcs-mimp\/commonPost\/~memberNonactivity~integralTaskStrategyService~queryPointTaskAndSignFromES(?:\?|$)/.test($request.url || '')) {
+    const body = JSON.parse($request.body || '{}')
+    const id = accountId(requestHeaders)
+    if (!id || typeof body.deviceId !== 'string' || !body.deviceId || !['1', '2', '3', '4'].includes(String(body.channelType))) return
+    const raw = $prefs.valueForKey(taskContextsKey)
+    const state = raw ? JSON.parse(raw) : { accounts: {} }
+    if (!state.accounts || typeof state.accounts !== 'object' || Array.isArray(state.accounts)) throw new Error('每日任务设备信息格式错误')
+    const context = { deviceId: body.deviceId, channelType: String(body.channelType) }
+    const changed = JSON.stringify(state.accounts[id]) !== JSON.stringify(context)
+    state.accounts[id] = context
+    if (!$prefs.setValueForKey(JSON.stringify(state), taskContextsKey)) throw new Error('每日任务设备信息保存失败')
+    if (changed) $notify('顺丰速运', `${accountLabel(requestHeaders, id)} 每日任务设备信息已保存`, '查询任务和领取积分将使用网页实际的设备标识')
+    return
+  }
   if (/^https:\/\/ccsp-egmas\.sf-express\.com\/cx-app-member\/member\/app\/user\/universalSign(?:\?|$)/.test($request.url || '')) {
     const body = JSON.parse($request.body || '{}')
     // This endpoint also signs other App features; capture only the member site.

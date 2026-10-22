@@ -2,6 +2,7 @@ const base = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonPost/'
 const sessionsKey = 'sfexpress_web_sessions'
 const legacyKey = 'sfexpress_web_session'
 const appSessionsKey = 'sfexpress_app_sessions'
+const taskContextsKey = 'sfexpress_task_contexts'
 const signService = '~memberNonactivity~integralSignV2Service~'
 const taskService = '~memberNonactivity~integralTaskStrategyService~'
 const taskRoute = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonRoutePost/memberEs/taskRecord/finishTask'
@@ -61,7 +62,10 @@ function loadAccounts() {
     throw new Error('已保存的 App 账号列表格式错误')
   }
   for (const id of Object.keys(appState.accounts)) accounts[id] = { ...accounts[id], ...appState.accounts[id] }
-  return Object.entries(accounts).map(([id, account]) => ({ ...account, id }))
+  const taskRaw = $prefs.valueForKey(taskContextsKey)
+  const taskState = taskRaw ? JSON.parse(taskRaw) : { accounts: {} }
+  if (!taskState.accounts || typeof taskState.accounts !== 'object' || Array.isArray(taskState.accounts)) throw new Error('每日任务设备信息格式错误')
+  return Object.entries(accounts).map(([id, account]) => ({ ...account, id, taskContext: taskState.accounts[id] }))
 }
 
 function headerValue(headers, name) {
@@ -185,10 +189,14 @@ async function runAccount(account) {
 
   let tasks = ''
   try {
-    const result = await request(taskService + 'queryPointTaskAndSignFromES', {
-      channelType: '1',
-      deviceId: headers.deviceId || headers.deviceid || ''
-    }, headers)
+    const savedContext = account.taskContext
+    const context = savedContext && typeof savedContext.deviceId === 'string' && savedContext.deviceId && ['1', '2', '3', '4'].includes(savedContext.channelType) ? savedContext : null
+    // Preserve the original script's parameters until the actual Web UUID is captured.
+    // The App's deviceid header is not localStorage.myPoints_UUID.
+    if (!context) console.log(`${label}：未采集网页任务设备信息，暂用原脚本参数；更新重写并打开积分页可采集`)
+    const result = await request(taskService + 'queryPointTaskAndSignFromES', context ? {
+      channelType: context.channelType, deviceId: context.deviceId
+    } : { channelType: '1' }, headers)
     if (!Array.isArray(result.taskTitleLevels)) throw new Error('每日任务列表格式已变化')
     const pending = result.taskTitleLevels.filter(task => task.status === 1 || task.status === 2)
     let claimed = 0
@@ -196,6 +204,7 @@ async function runAccount(account) {
     for (const task of pending) {
       if (!task.taskCode || task.strategyId == null || !task.taskId) {
         failed++
+        console.log(`${label} 每日任务 ${task.title || '未命名任务'}：缺少 taskCode、strategyId 或 taskId，未发送完成/领奖请求`)
         continue
       }
       try {
@@ -204,12 +213,12 @@ async function runAccount(account) {
           strategyId: task.strategyId,
           taskId: task.taskId,
           taskCode: task.taskCode,
-          channelType: '1'
+          ...(context ? { deviceId: context.deviceId } : { channelType: '1' })
         }, headers, false, false)
         claimed++
       } catch (error) {
         failed++
-        console.log(`${label} 每日任务 ${task.title || task.taskCode}：${error.message}`)
+        console.log(`${label} 每日任务 ${task.title || task.taskCode}（状态 ${task.status}，类型 ${task.actionType || '未知'}）：${error.message}`)
       }
     }
     tasks = `每日任务领取 ${claimed} 项，未完成 ${failed} 项`
