@@ -10,8 +10,8 @@ hostname = hrmapp.hitrontech.com, sytgate.jslife.com.cn, mcs-mimp-web.sf-express
 ^https:\/\/sytgate\.jslife\.com\.cn\/core-gateway\/order\/carno\/pay\/info url script-request-body https://raw.githubusercontent.com/FoKit/Scripts/main/scripts/jparking_sign.js
 
 ;顺丰签到：打开积分签到页时保存当前 Web 会话
-^https:\/\/ccsp-egmas\.sf-express\.com\/cx-app-member\/member\/app\/user\/universalSign(?:\?|$) url script-request-body https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/sfexpress.native-cookie.js
-^https:\/\/mcs-mimp-web\.sf-express\.com\/mcs-mimp\/commonPost\/~memberNonactivity~integralSignV2Service~getTodaySign url script-response-body https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/sfexpress.cookie.js
+^https:\/\/ccsp-egmas\.sf-express\.com\/cx-app-member\/member\/app\/user\/universalSign(?:\?|$) url script-request-body https://raw.githubusercontent.com/42vio/quantumultx-scripts/main/scripts/sfexpress.native-cookie.js
+^https:\/\/mcs-mimp-web\.sf-express\.com\/mcs-mimp\/commonPost\/~memberNonactivity~integralSignV2Service~getTodaySign url script-response-body https://raw.githubusercontent.com/42vio/quantumultx-scripts/main/scripts/sfexpress.cookie.js
 
 ;联通 GetCookie by chavyleung
 ^https:\/\/wapside.189.cn:9001\/api\/home\/homeInfo url script-request-body https://raw.githubusercontent.com/chavyleung/scripts/master/10000/10000.cookie.js
@@ -44,5 +44,5 @@ hostname = hrmapp.hitrontech.com, sytgate.jslife.com.cn, mcs-mimp-web.sf-express
 ^https?:\/\/fmapp\.chinafamilymart\.com\.cn\/api\/app\/market\/member\/(signin\/usersign|sign\/current) url script-request-header https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/script/famijia/famijia_checkin.js
 
 ;考勤 App 登录与考勤查询：保存登录响应令牌及请求模板，17:20 重新登录后提醒
-^https:\/\/hrmapp\.hitrontech\.com:9999\/scsrwd\/SCSService\.asmx url script-request-body https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/attendance-qx.js
-^https:\/\/hrmapp\.hitrontech\.com:9999\/scsrwd\/SCSService\.asmx url script-response-body https://raw.githubusercontent.com/42vio/QuantumultX/main/scripts/attendance-qx.js
+^https:\/\/hrmapp\.hitrontech\.com:9999\/scsrwd\/SCSService\.asmx url script-request-body https://raw.githubusercontent.com/42vio/quantumultx-scripts/main/scripts/attendance-qx.js
+^https:\/\/hrmapp\.hitrontech\.com:9999\/scsrwd\/SCSService\.asmx url script-response-body https://raw.githubusercontent.com/42vio/quantumultx-scripts/main/scripts/attendance-qx.js

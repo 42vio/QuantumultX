@@ -1,4 +1,4 @@
-# QuantumultX
+# quantumultx-scripts
 
 ## 顺丰速运签到
 
