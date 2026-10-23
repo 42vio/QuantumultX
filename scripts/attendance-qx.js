@@ -159,8 +159,9 @@ async function main() {
     "<SessionGuid>" + session + "</SessionGuid>");
   const result = await post(currentQuery, queryUserAgent, queryLanguage);
   const times = clockOut(result);
-  $notify("下班打卡提醒", "今天 " + times.clockIn + " 上班",
-    times.clockOut + (times.nextDay ? "（次日）" : "") + " 可打卡下班");
+  $notify("下班打卡提醒",
+    times.clockOut + (times.nextDay ? "（次日）" : "") + " 可打卡下班",
+    "今日上班时间：" + times.clockIn);
 }
 if (typeof $response !== "undefined") {
   captureResponse();
