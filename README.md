@@ -1,14 +1,5 @@
 # quantumultx-scripts
 
-## 顺丰速运签到
-
-`scripts/sfexpress.cookie.js` 在顺丰 App 积分签到页返回有效登录状态后，按账号保存 Web 会话；`scripts/sfexpress.native-cookie.js` 另行保存 App 的 `universalSign` 原始换票请求。更新重写和任务脚本，保持当前账号登录后重新进入积分页，确认出现“App 换票请求已保存”和“会话已更新”。任务会先重放原生请求取得新 `sign`，再经 `shareRedirect` 获取 Web Cookie；仅在 Cookie 账号 ID 与已保存账号一致、签到状态查询有效时更新该账号。之后沿用原签到及每日任务流程，不改任务状态判断、完成或领奖参数。
-
-成功更新会在通知末尾显示“App 换票已更新”。原生换票不可用时继续尝试已保存的 Web 会话；没有原生样本时保留原 Web 流程。已绑定到账号的原生请求会保留，后续可通过正式重写重新进入积分页更新请求。
-
-实测一份保存 139 分钟的原生请求仍能成功换票，自动换 Web 会话与签到也已在真机验证成功，尚未确认原生请求的最长有效期。退出登录可能撤销该账号的原生登录态，无法通过本改动保证退出后继续多账号签到。凭据仅保存在 QX 本机（`sfexpress_native_requests` 和 `sfexpress_web_sessions` 等），不写入仓库或日志。旧版单账号 Web 会话仍会自动纳入账号列表。
-
-
 ## 下班打卡提醒（Quantumult X）
 
 `scripts/attendance-qx.js` 同时负责保存 App 的 `GetAttendData` 查询请求，以及在 17:20 从同一台手机重放该请求、计算下班时间并通知。提醒时间取“上班打卡后 9 小时”和当天 17:30 中较晚的时间。查询请求只保存在 QX 本地偏好设置中；仓库脚本不包含账号、会话或设备标识。`QuantumultX_Cookie.qxrewrite` 已包含该 App 的重写和 MitM 域名，`TaskGallery.json` 已加入 17:20 任务。推送后，在 iPhone QX 更新这两个现有订阅。
